@@ -1,0 +1,198 @@
+project_name: tedge-mapper-template
+
+release:
+  prerelease: auto
+  draft: true
+  name_template: "tedge-mapper-template {{.Version}}"
+
+builds:
+  - <<: &build_defaults
+      binary: 'bin/{{ if index .Env "BINARY_INCLUDE_VERSION" }}{{ .ProjectName }}_{{ .RawVersion }}_{{ if eq .Os "darwin" }}macOS{{ else }}{{ .Os }}{{ end }}_{{ .Arch }}{{ else }}{{ .ProjectName }}{{ end }}'
+      main: ./main.go
+      flags:
+        - -trimpath
+      ldflags:
+        - -s -w -X github.com/reubenmiller/tedge-mapper-template/cmd.buildVersion={{.Version}} -X github.com/reubenmiller/tedge-mapper-template/cmd.buildBranch={{.Branch}}
+
+    id: macOS
+    goos: [darwin]
+    goarch: [amd64, arm64]
+
+  - <<: *build_defaults
+    id: linux
+    goos: [linux]
+    goarch: ["386", arm, amd64, arm64]
+    goarm:
+    - "5"
+    - "6"
+    - "7"
+    env:
+      - CGO_ENABLED=0
+
+  - <<: *build_defaults
+    id: windows
+    goos: [windows]
+    goarch: ["386", amd64, arm64]
+
+archives:
+  - id: nix
+    builds: [linux]
+    <<: &archive_defaults
+      name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    wrap_in_directory: "true"
+    format: tar.gz
+    files:
+      - LICENSE
+      # - defaults/*.yaml
+
+  - id: homebrew
+    builds: [macOS]
+    <<: *archive_defaults
+    wrap_in_directory: "true"
+    replacements:
+      darwin: macOS
+    format: tar.gz
+    files:
+      - LICENSE
+      # - defaults/*.yaml
+
+  - id: windows
+    builds: [windows]
+    <<: *archive_defaults
+    wrap_in_directory: "false"
+    format: zip
+    files:
+      - LICENSE
+      # - defaults/*.yaml
+  
+  - id: plainBinaries
+    builds: [macOS, linux, windows]
+    # Don't include the binary in the filename so it is easier to download the latest
+    <<: &archive_defaults
+      name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    replacements:
+      darwin: macOS
+    format: binary
+
+nfpms:
+  - 
+    package_name: tedge-mapper-template
+    license: MIT
+    maintainer: Reuben Miller <thinedge@thin-edge.io>
+    homepage: https://github.com/reubenmiller/tedge-mapper-template
+    bindir: /usr/local
+    description: thin-edge.io configurable mapper
+    section: utils
+    priority: optional
+    file_name_template: "{{ .PackageName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+    formats:
+      - deb
+      - rpm
+      - apk
+    # Packages your package suggests installing.
+    suggests:
+      - jq
+      - git
+
+    contents:
+      # Man pages
+      - src: "./share/man/man1/c8y*.1"
+        dst: "/usr/share/man/man1"
+
+      # Completions
+      - src: ./output/bash/tedge-mapper-template
+        dst: /etc/bash_completion.d/tedge-mapper-template
+      
+      - src: ./output/zsh/_tedge-mapper-template
+        dst: /usr/local/share/zsh/site-functions/_tedge-mapper-template
+      
+      - src: ./output/fish/tedge-mapper-template.fish
+        dst: /usr/share/fish/vendor_completions.d/tedge-mapper-template.fish
+      
+      # Addons
+      - src: defaults/*.yaml
+        dst: /etc/tedge-mapper-template/routes/
+        type: config|noreplace
+
+
+brews:
+  -
+    # Package name
+    name: tedge-mapper-template
+
+    # IDs of the archives to use.
+    ids:
+      - homebrew
+      - nix
+
+    # GOARM to specify which 32-bit arm version to use if there are multiple versions
+    # from the build section. Brew formulas support atm only one 32-bit version.
+    # Default is 6 for all artifacts or each id if there a multiple versions.
+    goarm: "6"
+
+    # GitHub/GitLab repository to push the formula to
+    tap:
+      owner: reubenmiller
+      name: homebrew-tedge-mapper-template
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+
+    # Template for the url which is determined by the given Token
+    url_template: "https://github.com/reubenmiller/tedge-mapper-template/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+
+    # Git author used to commit to the repository.
+    commit_author:
+      name: goreleaserbot
+      email: thinedge@thin-edge.io
+
+    # Folder inside the repository to put the formula.
+    folder: Formula
+
+    homepage: "https://github.com/reubenmiller/tedge-mapper-template"
+    description: "Cumulocity's unofficial command line tool"
+    license: "MIT"
+
+    # So you can `brew test` your formula.
+    test: |
+      system "#{bin}/tedge-mapper-template --version"
+
+    install: |
+      bin.install "bin/tedge-mapper-template"
+      # man1.install Dir["share/man/man1/*"]
+      
+      config_dir = etc/"tedge-mapper-template"
+
+      # Add completions
+      output = Utils.safe_popen_read({ "SHELL" => "bash" }, "#{bin}/tedge-mapper-template", "completion", "bash")
+      (bash_completion/"tedge-mapper-template").write output
+      output = Utils.safe_popen_read({ "SHELL" => "zsh" }, "#{bin}/tedge-mapper-template", "completion", "zsh")
+      (zsh_completion/"_tedge-mapper-template").write output
+      output = Utils.safe_popen_read({ "SHELL" => "fish" }, "#{bin}/tedge-mapper-template", "completion", "fish")
+      (fish_completion/"tedge-mapper-template.fish").write output
+
+
+dockers:
+  -
+    id: tedge-mapper-template
+    goos: linux
+    goarch: amd64
+    goarm: ''
+    goamd64: 'v1'
+    ids:
+    - linux
+
+    # Templates of the Docker image names.
+    image_templates:
+    - "ghcr.io/reubenmiller/{{.ProjectName}}-shell:latest"
+    - "ghcr.io/reubenmiller/{{.ProjectName}}-shell:{{ .Tag }}"
+
+    dockerfile: docker/shell.dockerfile
+    use: docker
+
+    # Template of the docker build flags.
+    build_flag_templates:
+    - "--pull"
+    - "--label=org.opencontainers.image.created={{.Date}}"
+    - "--label=org.opencontainers.image.title={{.ProjectName}}"
+    - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+    - "--label=org.opencontainers.image.version={{.Version}}"
+    - "--platform=linux/amd64"

@@ -1,0 +1,136 @@
+# yaml-language-server: $schema=../spec/schema.json
+---
+routes:
+- name: c8y-operation-smartrest
+  topic: c8y/s/ds
+  preprocessor:
+    type: csv
+    fields:
+      - msgid
+      - serial
+
+  template:
+    type: jsonnet
+    value: |
+      local topic = 'c8y/s/ds';
+      local message = 'msgid,DeviceSerial,...';
+      local meta = {};
+      local _ = {Now: function() "",};
+      local te = {lvl:0};
+
+      ###
+
+      {
+          message: message,
+          raw_message: message.payload,
+          topic: 'c8y/s/ds/' + message.msgid,
+      }
+
+- name: shell-operation
+  topic: c8y/s/ds/511
+  preprocessor:
+    type: csv
+    fields:
+      - msgid
+      - serial
+      - command
+
+  template:
+    type: jsonnet
+    value: |
+      local topic = 'c8y/s/ds/511';
+      local message = '511,DeviceSerial,"execute this"';
+      local meta = {};
+      local _ = {Now: function() "",};
+      local te = {lvl:0};
+
+      ###
+
+      {
+          message: {
+            command: message.command,
+          },
+          topic: 'tedge/operations/req/' + message.serial + '/' + 'execute_command',
+      }
+
+- name: download-config-operation
+  topic: c8y/s/ds/524
+  preprocessor:
+    type: csv
+    fields:
+      - id
+      - serial
+      - content.url
+      - content.type
+
+  template:
+    type: jsonnet
+    value: |
+      local topic = 'c8y/s/ds/524';
+      local message = '524,DeviceSerial,http://www.my.url,type';
+      local meta = {};
+      local _ = {Now: function() "",};
+      local te = {lvl:0};
+
+      ###
+
+      {
+          message: message.content,
+          topic: 'tedge/operations/req/' + message.serial + '/' + 'download_config',
+      }
+
+- name: firmware-update-operation
+  topic: c8y/s/ds/515
+  preprocessor:
+    type: csv
+    fields:
+      - id
+      - serial
+      - contents.name
+      - contents.version
+      - contents.url
+
+  template:
+    type: jsonnet
+    value: |
+      local topic = 'c8y/s/ds/515';
+      local message = '515,DeviceSerial,myFirmware,1.0,http://www.my.url';
+      local meta = {};
+      local _ = {Now: function() "",};
+      local te = {lvl:0};
+
+      ###
+
+      {
+          message: message.contents,
+          topic: 'tedge/operations/req/' + message.serial + '/' + 'download_config',
+      }
+
+- name: software-update-operation
+  topic: c8y/s/ds/529
+  preprocessor:
+    type: csv
+    fields:
+      - id
+      - serial
+      - contents.*.name
+      - contents.*.version
+      - contents.*.url
+      - contents.*.type
+      - contents.*.action
+
+  template:
+    type: jsonnet
+    value: |
+      local topic = 'c8y/s/ds/529';
+      local message = '529,DeviceSerial,a1,v1,url1,type1,url1,a2,v2,url2,type2,url2';
+      local meta = {};
+      local _ = {Now: function() "",};
+      local te = {lvl:0};
+
+      ###
+
+      {
+          message: message.contents,
+          topic: 'tedge/operations/req/' + message.serial + '/' + 'software_update',
+      }
