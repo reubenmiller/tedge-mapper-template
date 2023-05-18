@@ -17,7 +17,7 @@ In addition to the route configuration, there are also some prevention mechanism
 
 * Recursive message counter (to prevent infinite message loops)
 * Limit publishing rate (to prevent spamming)
-* Control if a message is allowed to be processed by other routes or not (via the `.final` property). Idea is to also allow the route to decide if it's messages are allowed to be accepted by other routes or not.
+* Control if a message is allowed to be processed by other routes or not (via the `.end` property). Idea is to also allow the route to decide if it's messages are allowed to be accepted by other routes or not.
 
 ## Design
 
@@ -60,7 +60,7 @@ local recurseReplace(any, from, to) = (
 # THIS PART IS THE OUTGOING MESSAGE!
 {
   message: recurseReplace(message, 'https?://\\bt\\d+\\.cumulocity.com', meta.env.C8Y_BASEURL),
-  final: true,
+  end: true,
   topic: topic,
   skip: false,
 }
@@ -89,8 +89,8 @@ Below shows an example of full jsonnet template which is applied to the incoming
 ```jsonnet
 local topic = 'c8y/s/ds/524';
 local _input = {"id":"524","serial":"DeviceSerial","content":{"url":"http://www.my.url","type":"type"},"payload":"524,DeviceSerial,http://www.my.url,type"};
-local message = if std.isObject(_input) then _input + {__te:: null} else _input;
-local te = {lvl:0} + std.get(_input, '__te', {});
+local message = if std.isObject(_input) then _input + {_ctx:: null} else _input;
+local te = {lvl:0} + std.get(_input, '_ctx', {});
 local meta = {"device_id":"test","env":{"C8Y_BASEURL":"https://example.cumulocity.com"}};
 
 local _ = {Now: function() std.native('Now')(), ReplacePattern: function(s, from, to='') std.native('ReplacePattern')(s, from, to),};
@@ -101,7 +101,7 @@ local _ = {Now: function() std.native('Now')(), ReplacePattern: function(s, from
     message: message.content,
     topic: 'tedge/operations/req/' + message.serial + '/' + 'download_config',
 }
- + {message+: {__te: te + {lvl: std.get(te, 'lvl', 0) + 1}}}
+ + {message+: {_ctx: te + {lvl: std.get(te, 'lvl', 0) + 1}}}
 
 ```
 
@@ -113,7 +113,7 @@ When the above template is evaluated, the following JSON data is produced. This 
 ```json
 {
   "message": {
-    "__te": {
+    "_ctx": {
       "lvl": 1
     },
     "type": "type",
@@ -168,7 +168,7 @@ Check the output of the `tedge-mapper-template`, and you will see that there act
 2023-05-18T21:57:35+02:00 INF Route activated on message. route=c8y-operation-smartrest topic=c8y/s/ds message=524,DeviceSerial,http://www.my.url,type
 2023-05-18T21:57:35+02:00 INF Publishing new message. topic=c8y/s/ds/524 message=524,DeviceSerial,http://www.my.url,type
 2023-05-18T21:57:37+02:00 INF Route activated on message. route=download-config-operation topic=c8y/s/ds/524 message=524,DeviceSerial,http://www.my.url,type
-2023-05-18T21:57:37+02:00 INF Publishing new message. topic=tedge/operations/req/DeviceSerial/download_config message="{\"__te\":{\"lvl\":1},\"type\":\"type\",\"url\":\"http://www.my.url\"}"
+2023-05-18T21:57:37+02:00 INF Publishing new message. topic=tedge/operations/req/DeviceSerial/download_config message="{\"_ctx\":{\"lvl\":1},\"type\":\"type\",\"url\":\"http://www.my.url\"}"
 ```
 
 The above log output shows that the `c8y-operation-operation-smartrest` route reacted to an incoming SmartREST message. The route then transformed the message and published a new message on a different topic which includes the SmartREST template id as other routes are listening to specific SmartREST template ids.
@@ -177,7 +177,7 @@ The `download-config-operation` route, then reacts and transforms the CSV messag
 
 ```json
 {
-    "__te": {
+    "_ctx": {
         "lvl": 1
     },
     "type": "type",
@@ -185,7 +185,7 @@ The `download-config-operation` route, then reacts and transforms the CSV messag
 }
 ```
 
-The `__te` fragment is automatically added to the message payload to try and prevent infinite loops. Each time the JSON payload goes through a route, the `__te.lvl` will increase by one. Currently the route counter is only added to JSON message (not CSV) due to a limitation. In the future only JSON formats will be supported, so this should not be too limiting. The other two properties, `type` and `url` have been added by the route during the conversion from CSV to JSON (using the in-built preprocessor block). Once the message is in the JSON format, it is much easier for plugins to handle the data, and add/remove fragments as needed.
+The `_ctx` fragment is automatically added to the message payload to try and prevent infinite loops. Each time the JSON payload goes through a route, the `_ctx.lvl` will increase by one. Currently the route counter is only added to JSON message (not CSV) due to a limitation. In the future only JSON formats will be supported, so this should not be too limiting. The other two properties, `type` and `url` have been added by the route during the conversion from CSV to JSON (using the in-built preprocessor block). Once the message is in the JSON format, it is much easier for plugins to handle the data, and add/remove fragments as needed.
 
 ## Building
 

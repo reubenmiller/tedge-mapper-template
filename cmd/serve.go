@@ -63,7 +63,7 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, opts ...jsonnet.Te
 			}
 
 			if route.Match(sm.Topic) {
-				if n := gjson.GetBytes(output, "__te.lvl"); n.Exists() {
+				if n := gjson.GetBytes(output, "_ctx.lvl"); n.Exists() {
 					if n.Int() > MaxRecursion {
 						slog.Warn("Nested level exceeded.", "topic", sm.Topic, "message", string(output))
 						return errors.ErrRecursiveLevelExceeded
@@ -71,10 +71,10 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, opts ...jsonnet.Te
 				}
 			}
 
-			if sm.Final {
-				if o, err := sjson.SetBytes(output, "__te.lvl", MaxRecursion); err == nil {
+			if sm.End {
+				if o, err := sjson.SetBytes(output, "_ctx.lvl", MaxRecursion); err == nil {
 					output = o
-					slog.Info("Set final message.", "topic", sm.Topic, "message", string(output))
+					slog.Info("Setting end message.", "topic", sm.Topic, "message", string(output))
 				}
 			}
 

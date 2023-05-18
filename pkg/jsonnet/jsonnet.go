@@ -139,14 +139,14 @@ func (e *JsonnetEngine) Execute(topic, input string) (string, error) {
 		sb.WriteString(fmt.Sprintf("local _input = '%s';\n", input))
 	}
 
-	sb.WriteString("local message = if std.isObject(_input) then _input + {__te:: null} else _input;\n")
+	sb.WriteString("local message = if std.isObject(_input) then _input + {_ctx:: null} else _input;\n")
 	if inputIsObject {
-		sb.WriteString("local te = {lvl:0} + std.get(_input, '__te', {});\n")
+		sb.WriteString("local te = {lvl:0} + std.get(_input, '_ctx', {});\n")
 	} else {
 		sb.WriteString("local te = {lvl:0};\n")
 	}
 	sb.WriteString(e.template)
-	sb.WriteString(" + {message+: {__te: te + {lvl: std.get(te, 'lvl', 0) + 1}}}")
+	sb.WriteString(" + {message+: {_ctx: te + {lvl: std.get(te, 'lvl', 0) + 1}}}")
 	output, err := e.vm.EvaluateAnonymousSnippet("file", sb.String())
 
 	if e.Debug() {

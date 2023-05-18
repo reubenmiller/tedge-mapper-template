@@ -98,6 +98,6 @@ routes:
 
       {
           message: recurseReplace(message, 'https?://\\bt\\d+\\.cumulocity.com', meta.env.C8Y_BASEURL),
-          final: true,
+          end: true,
           topic: topic,
       }

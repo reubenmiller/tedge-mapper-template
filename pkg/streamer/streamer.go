@@ -15,7 +15,7 @@ type OutputMessage struct {
 	Message    any    `json:"message,omitempty"`
 	RawMessage string `json:"raw_message,omitempty"`
 	Skip       bool   `json:"skip"`
-	Final      bool   `json:"final"`
+	End        bool   `json:"end"`
 }
 
 func NewStreamer(engine template.Templater) *Streamer {
