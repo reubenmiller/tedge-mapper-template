@@ -23,7 +23,10 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-var MaxRecursion int64 = 3
+var ArgMaxRecursion int64 = 3
+var ArgDir string
+var ArgBroker string
+var ArgClientID string
 
 func NewStreamFactory(client mqtt.Client, route routes.Route, opts ...jsonnet.TemplateOption) func(string, string) error {
 	engine := jsonnet.NewEngine(
@@ -64,7 +67,7 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, opts ...jsonnet.Te
 
 			if route.Match(sm.Topic) {
 				if n := gjson.GetBytes(output, "_ctx.lvl"); n.Exists() {
-					if n.Int() > MaxRecursion {
+					if n.Int() > ArgMaxRecursion {
 						slog.Warn("Nested level exceeded.", "topic", sm.Topic, "message", string(output))
 						return errors.ErrRecursiveLevelExceeded
 					}
@@ -72,7 +75,7 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, opts ...jsonnet.Te
 			}
 
 			if sm.End {
-				if o, err := sjson.SetBytes(output, "_ctx.lvl", MaxRecursion); err == nil {
+				if o, err := sjson.SetBytes(output, "_ctx.lvl", ArgMaxRecursion); err == nil {
 					output = o
 					slog.Info("Setting end message.", "topic", sm.Topic, "message", string(output))
 				}
@@ -96,16 +99,12 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, opts ...jsonnet.Te
 	}
 }
 
-var ArgDir string
-var ArgBroker string
-var ArgClientID string
-
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the translation service",
 	Long: `Run the translator which transforms MQTT messages on a matching topics to
-	new MQTT messages
+new MQTT messages
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		slog.Info("Starting listener")
@@ -172,4 +171,5 @@ func init() {
 	serveCmd.Flags().StringVar(&ArgDir, "dir", "./testdata", "Directory where the routes are stored")
 	serveCmd.Flags().StringVar(&ArgBroker, "host", "localhost:1883", "Broker endpoint (can included port number)")
 	serveCmd.Flags().StringVarP(&ArgClientID, "clientid", "i", "tedge-mapper-template", "MQTT client id")
+	serveCmd.Flags().Int64Var(&ArgMaxRecursion, "max-depth", 3, "Maximum recursion depth")
 }
