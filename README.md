@@ -17,6 +17,7 @@ In addition to the route configuration, there are also some prevention mechanism
 
 * Recursive message counter (to prevent infinite message loops)
 * Limit publishing rate (to prevent spamming)
+* Control if a message is allowed to be processed by other routes or not (via the `.final` property). Idea is to also allow the route to decide if it's messages are allowed to be accepted by other routes or not.
 
 ## Design
 
