@@ -12,7 +12,6 @@ var routesCmd = &cobra.Command{
 	Use:   "routes",
 	Short: "Routes command",
 	Long:  `Routes are used to transform input data to new messages`,
-	Run:   func(cmd *cobra.Command, args []string) {},
 }
 
 func init() {
