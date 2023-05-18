@@ -37,14 +37,15 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, opts ...jsonnet.Te
 	}
 
 	return func(topic, message string) error {
+		slog.Info("Route activated on message.", "route", route.Name, "topic", topic, "message", message)
 
 		if route.HasPreprocessor() {
-			slog.Info("Applying preprocessor to message")
+			slog.Debug("Applying preprocessor to message")
 			v, err := route.ExecutePreprocessor(message)
 			if err != nil {
 				return err
 			}
-			slog.Info("Preprocessor output.", "output", v)
+			slog.Debug("Preprocessor output.", "output", v)
 			message = v
 		}
 
