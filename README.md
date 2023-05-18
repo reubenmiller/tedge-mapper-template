@@ -66,6 +66,63 @@ local recurseReplace(any, from, to) = (
 }
 ```
 
+To make the templating language more useful, additional variables are also injected into the template each time the template is applied to an incoming message.
+
+|Variable|Description|Example|
+|----|----|----|
+|`topic`|Topic of the incoming message|`c8y/s/ds/524`|
+|`message`|Payload of incoming message (most of the time this is JSON but it can be CSV|`{}`|
+|`meta`|Additional meta information which can be used within the templates (e.g. access environment variables `meta.env.<ENV_VARIABLE>`)|`{"device_id":"mydevice","env":{"C8Y_BASEURL":"https://example.cumulocity.com"}}`|
+|`te`|Internal Routing information, e.g. how many levels of routes has the message or derivatives of the message|`{"lvl":0}`|
+|`_`|Object providing some additional functions like `_.Now()` to get the current timestamp in RFC3334 format|
+
+You can see the exact jsonnet templates used (including the injected runtime information) by specifying the `--debug` flag.
+
+For example, starting the application with `--debug` will print out the full JSONNET template to the console.
+
+```sh
+go run main.go serve --debug
+```
+
+Below shows an example of full jsonnet template which is applied to the incoming message. 
+
+```jsonnet
+local topic = 'c8y/s/ds/524';
+local _input = {"id":"524","serial":"DeviceSerial","content":{"url":"http://www.my.url","type":"type"},"payload":"524,DeviceSerial,http://www.my.url,type"};
+local message = if std.isObject(_input) then _input + {__te:: null} else _input;
+local te = {lvl:0} + std.get(_input, '__te', {});
+local meta = {"device_id":"test","env":{"C8Y_BASEURL":"https://example.cumulocity.com"}};
+
+local _ = {Now: function() std.native('Now')(), ReplacePattern: function(s, from, to='') std.native('ReplacePattern')(s, from, to),};
+
+###
+
+{
+    message: message.content,
+    topic: 'tedge/operations/req/' + message.serial + '/' + 'download_config',
+}
+ + {message+: {__te: te + {lvl: std.get(te, 'lvl', 0) + 1}}}
+
+```
+
+When the above template is evaluated, the following JSON data is produced. This will be the data which is interpreted by the PostProcessor and published as a MQTT message. It shows that the data structure includes the `.topic` field which is used to tell where the `.message` should be published to. There are additional properties which can also be used to customize the handling of this message.
+
+*Output: Template output*
+
+
+```json
+{
+  "message": {
+    "__te": {
+      "lvl": 1
+    },
+    "type": "type",
+    "url": "http://www.my.url"
+  },
+  "topic": "tedge/operations/req/DeviceSerial/download_config"
+}
+```
+
 ## Caveats
 
 * Template based mapping will likely be too slow for high throughput messages (this is a tradeoff for having high configuration)
