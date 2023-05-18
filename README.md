@@ -70,3 +70,75 @@ local recurseReplace(any, from, to) = (
 
 * Template based mapping will likely be too slow for high throughput messages (this is a tradeoff for having high configuration)
 * Templates are loaded from a yaml spec which contains jsonnet templates embedded
+
+## Getting started
+
+After checking out the project you can get everything up and running using the following commands.
+
+```sh
+go run main.go serve --verbose
+```
+
+By default it will listen to the MQTT broker on `localhost:1883`, however it can be changed. Just checkout the options in the help, e.g.
+
+```sh
+go run main.go serve --help
+```
+
+`tedge-mapper-template` will also load all of the routes in the `./testdata` to help you get an idea what are some of the possibilities.
+
+
+Once the application has subscribed to the MQTT broker, then you can open another console, and try publishing to a topic which will trigger one of the matching routes. Below is publishing a message using `mosquitto_pub` to the `c8y/s/ds` topic.
+
+```sh
+mosquitto_pub -t 'c8y/s/ds' -m '524,DeviceSerial,http://www.my.url,type'
+```
+
+Check the output of the `tedge-mapper-template`, and you will see that there activity there showing the processing of some messages:
+
+```log
+2023-05-18T21:57:33+02:00 INF Starting listener
+2023-05-18T21:57:33+02:00 INF Registering route. name=c8y-operation-smartrest topic=c8y/s/ds
+2023-05-18T21:57:33+02:00 INF Registering route. name=shell-operation topic=c8y/s/ds/511
+2023-05-18T21:57:33+02:00 INF Registering route. name=download-config-operation topic=c8y/s/ds/524
+2023-05-18T21:57:33+02:00 INF Registering route. name=firmware-update-operation topic=c8y/s/ds/515
+2023-05-18T21:57:33+02:00 INF Registering route. name=software-update-operation topic=c8y/s/ds/529
+2023-05-18T21:57:33+02:00 INF Ignoring route marked as skip. name="Cumulocity Operation Mapper Without Preprocessor" topic=c8y/s/ds
+2023-05-18T21:57:33+02:00 INF Ignoring route marked as skip. name="simple measurements" topic=tedge/measurements
+2023-05-18T21:57:33+02:00 INF Registering route. name="complex measurements" topic=tedge/measurements/+
+2023-05-18T21:57:33+02:00 INF Registering route. name="Trigger event from measurement" topic=tedge/measurements
+2023-05-18T21:57:33+02:00 INF Registering route. name="Modify urls" topic=tedge/operations/req/config_update
+2023-05-18T21:57:35+02:00 INF Route activated on message. route=c8y-operation-smartrest topic=c8y/s/ds message=524,DeviceSerial,http://www.my.url,type
+2023-05-18T21:57:35+02:00 INF Publishing new message. topic=c8y/s/ds/524 message=524,DeviceSerial,http://www.my.url,type
+2023-05-18T21:57:37+02:00 INF Route activated on message. route=download-config-operation topic=c8y/s/ds/524 message=524,DeviceSerial,http://www.my.url,type
+2023-05-18T21:57:37+02:00 INF Publishing new message. topic=tedge/operations/req/DeviceSerial/download_config message="{\"__te\":{\"lvl\":1},\"type\":\"type\",\"url\":\"http://www.my.url\"}"
+```
+
+The above log output shows that the `c8y-operation-operation-smartrest` route reacted to an incoming SmartREST message. The route then transformed the message and published a new message on a different topic which includes the SmartREST template id as other routes are listening to specific SmartREST template ids.
+
+The `download-config-operation` route, then reacts and transforms the CSV message into JSON. Below shows a pretty printed version of the outgoing message from this router.
+
+```json
+{
+    "__te": {
+        "lvl": 1
+    },
+    "type": "type",
+    "url": "http://www.my.url"
+}
+```
+
+The `__te` fragment is automatically added to the message payload to try and prevent infinite loops. Each time the JSON payload goes through a route, the `__te.lvl` will increase by one. Currently the route counter is only added to JSON message (not CSV) due to a limitation. In the future only JSON formats will be supported, so this should not be too limiting. The other two properties, `type` and `url` have been added by the route during the conversion from CSV to JSON (using the in-built preprocessor block). Once the message is in the JSON format, it is much easier for plugins to handle the data, and add/remove fragments as needed.
+
+## Building
+
+You can build the binaries for a range of targets by using the following command, though before you run it, you need to install some tooling which is used to run the projec'ts tasks.
+
+* Install [just](https://just.systems/man/en/chapter_5.html)
+* Install [goreleaser](https://goreleaser.com/install/)
+
+Once you've installed the above tools, then you can build the project using:
+
+```sh
+just build
+```
