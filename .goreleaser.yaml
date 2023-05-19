@@ -77,7 +77,7 @@ nfpms:
     license: MIT
     maintainer: Reuben Miller <thinedge@thin-edge.io>
     homepage: https://github.com/reubenmiller/tedge-mapper-template
-    bindir: /usr/local
+    bindir: /usr
     description: thin-edge.io configurable mapper
     section: utils
     priority: optional
@@ -91,10 +91,26 @@ nfpms:
       - jq
       - git
 
+    scripts:
+      preremove: ./packaging/scripts/pre-remove
+      postinstall: ./packaging/scripts/post-install
+      postremove: ./packaging/scripts/post-remove
+
     contents:
-      # Man pages
-      # - src: "./share/man/man1/c8y*.1"
-      #   dst: "/usr/share/man/man1"
+      # Services
+      - src: ./packaging/services/systemd/service.systemd
+        dst: /usr/lib/systemd/system/tedge-mapper-template.service
+        file_info:
+          mode: 0644
+          owner: tedge
+          group: tedge
+
+      - src: ./packaging/services/init.d/service.initd
+        dst: /etc/init.d/tedge-mapper-template
+        file_info:
+          mode: 0644
+          owner: tedge
+          group: tedge
 
       # Completions
       - src: ./output/completions.bash
@@ -112,59 +128,59 @@ nfpms:
         type: config|noreplace
 
 
-brews:
-  -
-    # Package name
-    name: tedge-mapper-template
+# brews:
+#   -
+#     # Package name
+#     name: tedge-mapper-template
 
-    # IDs of the archives to use.
-    ids:
-      - homebrew
-      - nix
+#     # IDs of the archives to use.
+#     ids:
+#       - homebrew
+#       - nix
 
-    # GOARM to specify which 32-bit arm version to use if there are multiple versions
-    # from the build section. Brew formulas support atm only one 32-bit version.
-    # Default is 6 for all artifacts or each id if there a multiple versions.
-    goarm: "6"
+#     # GOARM to specify which 32-bit arm version to use if there are multiple versions
+#     # from the build section. Brew formulas support atm only one 32-bit version.
+#     # Default is 6 for all artifacts or each id if there a multiple versions.
+#     goarm: "6"
 
-    # GitHub/GitLab repository to push the formula to
-    tap:
-      owner: reubenmiller
-      name: homebrew-tedge-mapper-template
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+#     # GitHub/GitLab repository to push the formula to
+#     tap:
+#       owner: reubenmiller
+#       name: homebrew-tedge-mapper-template
+#       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
 
-    # Template for the url which is determined by the given Token
-    url_template: "https://github.com/reubenmiller/tedge-mapper-template/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+#     # Template for the url which is determined by the given Token
+#     url_template: "https://github.com/reubenmiller/tedge-mapper-template/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
 
-    # Git author used to commit to the repository.
-    commit_author:
-      name: goreleaserbot
-      email: thinedge@thin-edge.io
+#     # Git author used to commit to the repository.
+#     commit_author:
+#       name: goreleaserbot
+#       email: thinedge@thin-edge.io
 
-    # Folder inside the repository to put the formula.
-    folder: Formula
+#     # Folder inside the repository to put the formula.
+#     folder: Formula
 
-    homepage: "https://github.com/reubenmiller/tedge-mapper-template"
-    description: "experimental thin-edge.io mapper based on configurable templates"
-    license: "MIT"
+#     homepage: "https://github.com/reubenmiller/tedge-mapper-template"
+#     description: "experimental thin-edge.io mapper based on configurable templates"
+#     license: "MIT"
 
-    # So you can `brew test` your formula.
-    test: |
-      system "#{bin}/tedge-mapper-template --version"
+#     # So you can `brew test` your formula.
+#     test: |
+#       system "#{bin}/tedge-mapper-template --version"
 
-    install: |
-      bin.install "bin/tedge-mapper-template"
-      # man1.install Dir["share/man/man1/*"]
+#     install: |
+#       bin.install "bin/tedge-mapper-template"
+#       # man1.install Dir["share/man/man1/*"]
       
-      config_dir = etc/"tedge-mapper-template"
+#       config_dir = etc/"tedge-mapper-template"
 
-      # Add completions
-      output = Utils.safe_popen_read({ "SHELL" => "bash" }, "#{bin}/tedge-mapper-template", "completion", "bash")
-      (bash_completion/"tedge-mapper-template").write output
-      output = Utils.safe_popen_read({ "SHELL" => "zsh" }, "#{bin}/tedge-mapper-template", "completion", "zsh")
-      (zsh_completion/"_tedge-mapper-template").write output
-      output = Utils.safe_popen_read({ "SHELL" => "fish" }, "#{bin}/tedge-mapper-template", "completion", "fish")
-      (fish_completion/"tedge-mapper-template.fish").write output
+#       # Add completions
+#       output = Utils.safe_popen_read({ "SHELL" => "bash" }, "#{bin}/tedge-mapper-template", "completion", "bash")
+#       (bash_completion/"tedge-mapper-template").write output
+#       output = Utils.safe_popen_read({ "SHELL" => "zsh" }, "#{bin}/tedge-mapper-template", "completion", "zsh")
+#       (zsh_completion/"_tedge-mapper-template").write output
+#       output = Utils.safe_popen_read({ "SHELL" => "fish" }, "#{bin}/tedge-mapper-template", "completion", "fish")
+#       (fish_completion/"tedge-mapper-template.fish").write output
 
 
 dockers:

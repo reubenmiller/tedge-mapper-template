@@ -25,7 +25,7 @@ release *ARGS='':
     docker context use default
     goreleaser release --clean --auto-snapshot {{ARGS}}
 
-release-snapshot:
+release-local:
     just -f "{{justfile()}}" release --snapshot
 
 # Run local container (requires ko)

@@ -1,0 +1,14 @@
+[Unit]
+Description=thin-edge.io experimental template based mapper
+After=mosquitto.service
+
+[Service]
+ExecStart=/usr/bin/tedge-mapper-template --verbose --dir /etc/tedge-mapper-template/routes
+User=tedge
+Restart=always
+RestartSec=30
+EnvironmentFile=-/etc/tedge-mapper-template/env
+ExecReload=/usr/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target
