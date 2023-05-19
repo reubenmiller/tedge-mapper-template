@@ -22,12 +22,14 @@ type Service struct {
 }
 
 func NewService(broker string, clientID string) (*Service, error) {
-	opts := mqtt.NewClientOptions().SetClientID(clientID).AddBroker(broker).SetCleanSession(false).SetWill("tedge/health/tedge-mapper-template", `{"status":"down"}`, 1, true)
+	healthTopic := fmt.Sprintf("tedge/health/%s", clientID)
+	opts := mqtt.NewClientOptions().SetClientID(clientID).AddBroker(broker).SetCleanSession(false).SetWill(healthTopic, `{"status":"down"}`, 1, true)
 	client := mqtt.NewClient(opts)
 
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		return nil, token.Error()
 	}
+	client.Publish(healthTopic, 1, true, `{"status":"up"}`)
 
 	return &Service{
 		Client:        client,
@@ -40,6 +42,7 @@ func isYaml(name string) bool {
 }
 
 func (s *Service) ScanMappingFiles(dir string) []routes.Route {
+	slog.Info("Scanning for routes.", "path", dir)
 	mappings := make([]routes.Route, 0)
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -84,6 +87,10 @@ func (s *Service) Register(topic string, qos byte, handler MessageHandler) error
 }
 
 func (s *Service) StartSubscriptions() error {
+	if len(s.Subscriptions) == 0 {
+		slog.Warn("No routes were detected, so nothing to subscribe to")
+		return nil
+	}
 	if token := s.Client.SubscribeMultiple(s.Subscriptions, nil); token.Wait() && token.Error() != nil {
 		return fmt.Errorf("error subscribing to topic '%v': %v", s.Subscriptions, token.Error())
 	}
