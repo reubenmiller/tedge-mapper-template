@@ -23,9 +23,17 @@ var ArgDelay time.Duration
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "Start the translation service",
+	Short: "Start the mapper and subscribe to the MQTT broker",
 	Long: `Run the translator which transforms MQTT messages on a matching topics to
 new messages.
+
+Examples:
+
+	tedge-mapper-template serve --dir routes
+	# Start the mapper and use any routes defined under the ./routes directory
+
+	tedge-mapper-template serve --host 'otherhost:1883'
+	# Start the mapper using a custom MQTT broker endpoint
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		slog.Info("Starting listener")
@@ -52,7 +60,7 @@ new messages.
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
-	serveCmd.Flags().StringVar(&ArgDir, "dir", "./testdata", "Directory where the routes are stored")
+	serveCmd.Flags().StringVar(&ArgDir, "dir", "routes", "Directory where the routes are stored")
 	serveCmd.Flags().StringVar(&ArgBroker, "host", "localhost:1883", "Broker endpoint (can included port number)")
 	serveCmd.Flags().StringVarP(&ArgClientID, "clientid", "i", "tedge-mapper-template", "MQTT client id")
 	serveCmd.Flags().Int64Var(&ArgMaxDepth, "max-depth", 3, "Maximum recursion depth")

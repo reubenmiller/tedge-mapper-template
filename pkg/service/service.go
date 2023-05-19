@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/reubenmiller/tedge-mapper-template/pkg/routes"
+	"github.com/reubenmiller/tedge-mapper-template/pkg/streamer"
+	"golang.org/x/exp/slog"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"gopkg.in/yaml.v3"
@@ -39,7 +41,10 @@ func isYaml(name string) bool {
 
 func (s *Service) ScanMappingFiles(dir string) []routes.Route {
 	mappings := make([]routes.Route, 0)
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		if d.Type().IsDir() {
 			return nil
 		}
@@ -61,10 +66,13 @@ func (s *Service) ScanMappingFiles(dir string) []routes.Route {
 		}
 		return nil
 	})
+	if err != nil {
+		slog.Default().Warn("Error whilst looking for files.", "err", err)
+	}
 	return mappings
 }
 
-type MessageHandler func(string, string) error
+type MessageHandler func(topic string, message_in string) (message_out *streamer.OutputMessage, err error)
 
 func (s *Service) Register(topic string, qos byte, handler MessageHandler) error {
 	handlerWrapper := func(c mqtt.Client, m mqtt.Message) {

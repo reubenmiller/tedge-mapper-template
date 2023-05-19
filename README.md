@@ -142,7 +142,7 @@ By default it will listen to the MQTT broker on `localhost:1883`, however it can
 go run main.go serve --help
 ```
 
-`tedge-mapper-template` will also load all of the routes in the `./testdata` to help you get an idea what are some of the possibilities.
+`tedge-mapper-template` will also load all of the routes in the `./routes` directory to help you get an idea what are some of the possibilities.
 
 
 Once the application has subscribed to the MQTT broker, then you can open another console, and try publishing to a topic which will trigger one of the matching routes. Below is publishing a message using `mosquitto_pub` to the `c8y/s/ds` topic.
