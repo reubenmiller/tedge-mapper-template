@@ -1,3 +1,3 @@
 
 build *ARGS='':
-    goreleaser build --rm-dist --snapshot {{ARGS}}
+    goreleaser build --clean --snapshot {{ARGS}}
