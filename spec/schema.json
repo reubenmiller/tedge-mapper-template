@@ -72,6 +72,9 @@
         }
     },
     "properties": {
+        "disable": {
+            "type": "boolean"
+        },
         "routes": {
             "type": "array",
             "items": {

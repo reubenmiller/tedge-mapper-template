@@ -24,6 +24,23 @@ func NewStreamer(engine template.Templater) *Streamer {
 	}
 }
 
+func (m *OutputMessage) MessageString() string {
+	if m.RawMessage != "" {
+		return m.RawMessage
+	}
+
+	switch v := m.Message.(type) {
+	case string:
+		return v
+	default:
+		out, err := json.Marshal(v)
+		if err != nil {
+			return ""
+		}
+		return string(out)
+	}
+}
+
 func (s *Streamer) Process(topic, message string) (*OutputMessage, error) {
 	out, err := s.Engine.Execute(topic, message)
 	if err != nil {

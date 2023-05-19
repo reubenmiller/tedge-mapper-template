@@ -4,10 +4,11 @@ Copyright © 2023 thin-edge thinedge@thin-edge.io
 package cmd
 
 import (
-	"encoding/json"
+	"fmt"
 
 	"github.com/reubenmiller/tedge-mapper-template/pkg/jsonnet"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/service"
+	"github.com/reubenmiller/tedge-mapper-template/pkg/streamer"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slog"
 )
@@ -32,8 +33,9 @@ Examples:
 		routeDir, _ := cmd.Root().PersistentFlags().GetString("dir")
 		topic, _ := cmd.Flags().GetString("topic")
 		message, _ := cmd.Flags().GetString("message")
+		compact, _ := cmd.Flags().GetBool("compact")
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, routeDir, ArgMaxDepth, ArgDelay, debug)
+		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, routeDir, ArgMaxDepth, ArgDelay, debug)
 		if err != nil {
 			return err
 		}
@@ -43,35 +45,61 @@ Examples:
 
 		slog.Debug("Total routes.", "count", len(routes))
 
-		for _, route := range routes {
-			if !route.Skip {
-				if route.Match(topic) {
-					handler := service.NewStreamFactory(nil, route, 1, 0,
-						jsonnet.WithMetaData(meta),
-						jsonnet.WithDebug(debug),
-					)
+		queue := make(chan streamer.OutputMessage)
+		done := make(chan struct{})
 
-					output, err := handler(topic, message)
-					if err != nil {
-						slog.Error("handler returned an error.", "err", err)
-					} else {
-						cmd.Printf("topic\t%s\n", output.Topic)
-						cmd.Printf("skip\t%v\n", output.Skip)
-						cmd.Printf("end\t%v\n", output.End)
-						if output.RawMessage != "" {
-							cmd.Printf("%s", output.RawMessage)
-						} else {
-							out, err := json.Marshal(output.Message)
-							if err != nil {
-								cmd.Printf("%s", err)
-							} else {
-								cmd.Printf("%s", out)
+		addMessage := func(topic string, message string) {
+			queue <- streamer.OutputMessage{
+				Topic:   topic,
+				Message: message,
+			}
+		}
+
+		go addMessage(topic, message)
+
+	loop:
+		for {
+			select {
+			case imsg := <-queue:
+				go func(msg streamer.OutputMessage) {
+					foundRoute := false
+					for _, route := range routes {
+						if !route.Skip {
+							if !route.Match(msg.Topic) {
+								slog.Debug("Route did not match topic.", "route", route.Name, "root_topic", route.Topic, "topic", topic)
+								continue
 							}
+
+							foundRoute = true
+							// cmd.Printf("Route:\t%s\n", route.Name)
+							handler := service.NewStreamFactory(nil, route, 1, 0,
+								jsonnet.WithMetaData(meta),
+								jsonnet.WithDebug(debug),
+							)
+
+							output, err := handler(msg.Topic, msg.Message.(string))
+							if err != nil {
+								slog.Error("handler returned an error.", "err", err)
+								done <- struct{}{}
+								return
+							}
+
+							if stop := service.DisplayMessage(fmt.Sprintf("%s (%s)", route.Name, route.Topic), &imsg, output, cmd.ErrOrStderr(), compact); stop {
+								done <- struct{}{}
+								return
+							}
+							slog.Info("Queuing new message")
+							go addMessage(output.Topic, output.MessageString())
 						}
 					}
-				} else {
-					slog.Debug("Route did not match topic.", "route", route.Name, "root_topic", route.Topic, "topic", topic)
-				}
+					if !foundRoute {
+						slog.Info("No matching routes found. Stopping")
+						done <- struct{}{}
+					}
+				}(imsg)
+
+			case <-done:
+				break loop
 			}
 		}
 		return nil
@@ -84,4 +112,5 @@ func init() {
 	executeCmd.Flags().StringP("topic", "t", "", "Topic")
 	executeCmd.Flags().StringP("message", "m", "", "Input message")
 	executeCmd.Flags().StringP("file", "f", "", "Template file")
+	executeCmd.Flags().Bool("compact", false, "Print output message in compact format (not pretty printed)")
 }

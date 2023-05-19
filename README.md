@@ -73,15 +73,15 @@ To make the templating language more useful, additional variables are also injec
 |`topic`|Topic of the incoming message|`c8y/s/ds/524`|
 |`message`|Payload of incoming message (most of the time this is JSON but it can be CSV|`{}`|
 |`meta`|Additional meta information which can be used within the templates (e.g. access environment variables `meta.env.<ENV_VARIABLE>`)|`{"device_id":"mydevice","env":{"C8Y_BASEURL":"https://example.cumulocity.com"}}`|
-|`te`|Internal Routing information, e.g. how many levels of routes has the message or derivatives of the message|`{"lvl":0}`|
+|`ctx`|Internal Routing Context, e.g. how many levels of routes has the message or derivatives of the message|`{"lvl":0}`|
 |`_`|Object providing some additional functions like `_.Now()` to get the current timestamp in RFC3334 format|
 
 You can see the exact jsonnet templates used (including the injected runtime information) by specifying the `--debug` flag.
 
-For example, starting the application with `--debug` will print out the full JSONNET template to the console.
+For example, starting the application with `--debug` will print out the full jsonnet template to the console.
 
 ```sh
-go run main.go serve --debug
+go run main.go --debug
 ```
 
 Below shows an example of full jsonnet template which is applied to the incoming message. 
@@ -90,7 +90,7 @@ Below shows an example of full jsonnet template which is applied to the incoming
 local topic = 'c8y/s/ds/524';
 local _input = {"id":"524","serial":"DeviceSerial","content":{"url":"http://www.my.url","type":"type"},"payload":"524,DeviceSerial,http://www.my.url,type"};
 local message = if std.isObject(_input) then _input + {_ctx:: null} else _input;
-local te = {lvl:0} + std.get(_input, '_ctx', {});
+local ctx = {lvl:0} + std.get(_input, '_ctx', {});
 local meta = {"device_id":"test","env":{"C8Y_BASEURL":"https://example.cumulocity.com"}};
 
 local _ = {Now: function() std.native('Now')(), ReplacePattern: function(s, from, to='') std.native('ReplacePattern')(s, from, to),};
@@ -101,7 +101,7 @@ local _ = {Now: function() std.native('Now')(), ReplacePattern: function(s, from
     message: message.content,
     topic: 'tedge/operations/req/' + message.serial + '/' + 'download_config',
 }
- + {message+: {_ctx: te + {lvl: std.get(te, 'lvl', 0) + 1}}}
+ + {message+: {_ctx: ctx + {lvl: std.get(ctx, 'lvl', 0) + 1}}}
 
 ```
 
@@ -133,13 +133,13 @@ When the above template is evaluated, the following JSON data is produced. This 
 After checking out the project you can get everything up and running using the following commands.
 
 ```sh
-go run main.go serve --verbose
+go run main.go
 ```
 
 By default it will listen to the MQTT broker on `localhost:1883`, however it can be changed. Just checkout the options in the help, e.g.
 
 ```sh
-go run main.go serve --help
+go run main.go --help
 ```
 
 `tedge-mapper-template` will also load all of the routes in the `./routes` directory to help you get an idea what are some of the possibilities.

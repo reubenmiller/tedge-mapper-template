@@ -12,14 +12,6 @@ routes:
   template:
     type: jsonnet
     value: |
-      local topic = 'c8y/s/ds';
-      local message = 'msgid,DeviceSerial,...';
-      local meta = {};
-      local _ = {Now: function() "",};
-      local te = {lvl:0};
-
-      ###
-
       {
           message: message,
           raw_message: message.payload,
@@ -38,14 +30,6 @@ routes:
   template:
     type: jsonnet
     value: |
-      local topic = 'c8y/s/ds/511';
-      local message = '511,DeviceSerial,"execute this"';
-      local meta = {};
-      local _ = {Now: function() "",};
-      local te = {lvl:0};
-
-      ###
-
       {
           message: {
             command: message.command,
@@ -66,14 +50,6 @@ routes:
   template:
     type: jsonnet
     value: |
-      local topic = 'c8y/s/ds/524';
-      local message = '524,DeviceSerial,http://www.my.url,type';
-      local meta = {};
-      local _ = {Now: function() "",};
-      local te = {lvl:0};
-
-      ###
-
       {
           message: message.content,
           topic: 'tedge/operations/req/' + message.serial + '/' + 'download_config',
@@ -93,14 +69,6 @@ routes:
   template:
     type: jsonnet
     value: |
-      local topic = 'c8y/s/ds/515';
-      local message = '515,DeviceSerial,myFirmware,1.0,http://www.my.url';
-      local meta = {};
-      local _ = {Now: function() "",};
-      local te = {lvl:0};
-
-      ###
-
       {
           message: message.contents,
           topic: 'tedge/operations/req/' + message.serial + '/' + 'download_config',
@@ -122,14 +90,6 @@ routes:
   template:
     type: jsonnet
     value: |
-      local topic = 'c8y/s/ds/529';
-      local message = '529,DeviceSerial,a1,v1,url1,type1,url1,a2,v2,url2,type2,url2';
-      local meta = {};
-      local _ = {Now: function() "",};
-      local te = {lvl:0};
-
-      ###
-
       {
           message: message.contents,
           topic: 'tedge/operations/req/' + message.serial + '/' + 'software_update',

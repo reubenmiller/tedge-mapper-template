@@ -7,15 +7,6 @@ routes:
   template:
     type: jsonnet
     value: |
-      local topic = 's/ds';
-      #local message = '511,DeviceSerial,"execute this"';
-      local message = '515,DeviceSerial,myFirmware,1.0,http://www.my.url';
-      local meta = {};
-      local _ = {Now: function() "",};
-      local te = {lvl:0};
-
-      ###
-
       local toMap = function(a, keys, default=null)
         std.prune({
           [keys[i]]: if i < std.length(a) then a[i] else default,

@@ -6,6 +6,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/lmittmann/tint"
@@ -28,19 +29,22 @@ files which control the transformation of messages from one topic to another.
 	Version: fmt.Sprintf("%s (branch=%s)", buildVersion, buildBranch),
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		debug, _ := cmd.Root().PersistentFlags().GetBool("debug")
-		verbose, _ := cmd.Root().PersistentFlags().GetBool("verbose")
+		loglevel, _ := cmd.Root().PersistentFlags().GetString("loglevel")
+		showTimestamps, _ := cmd.Root().PersistentFlags().GetBool("timestamps")
 
-		logLevel := slog.LevelWarn
+		logLevel := GetLogLevel(loglevel)
 		if debug {
 			logLevel = slog.LevelDebug
-		} else if verbose {
-			logLevel = slog.LevelInfo
 		}
 
 		// set global logger with custom options
+		logfmt := time.RFC3339
+		if !showTimestamps {
+			logfmt = " "
+		}
 		slog.SetDefault(slog.New(tint.NewHandler(colorable.NewColorableStderr(), &tint.Options{
 			Level:      logLevel,
-			TimeFormat: time.RFC3339,
+			TimeFormat: logfmt,
 		})))
 		return nil
 	},
@@ -48,6 +52,21 @@ files which control the transformation of messages from one topic to another.
 		// By default run the serve command
 		return serveCmd.RunE(cmd, args)
 	},
+}
+
+func GetLogLevel(s string) slog.Level {
+	switch strings.ToLower(s) {
+	case "info", "information":
+		return slog.LevelInfo
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "debug":
+		return slog.LevelDebug
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelWarn
+	}
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -61,7 +80,8 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().Bool("debug", false, "Debug logging")
-	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Verbose logging")
+	rootCmd.PersistentFlags().Bool("debug", false, "Enable template debugging")
+	rootCmd.PersistentFlags().String("loglevel", "info", "Log level: debug, info, warn, error")
+	rootCmd.PersistentFlags().Bool("timestamps", true, "Show date/time in log entries")
 	rootCmd.PersistentFlags().String("dir", "routes", "Route directory")
 }

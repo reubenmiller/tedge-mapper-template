@@ -21,9 +21,9 @@ type Service struct {
 	Subscriptions map[string]byte
 }
 
-func NewService(broker string, clientID string) (*Service, error) {
+func NewService(broker string, clientID string, cleanSession bool) (*Service, error) {
 	healthTopic := fmt.Sprintf("tedge/health/%s", clientID)
-	opts := mqtt.NewClientOptions().SetClientID(clientID).AddBroker(broker).SetCleanSession(false).SetWill(healthTopic, `{"status":"down"}`, 1, true)
+	opts := mqtt.NewClientOptions().SetClientID(clientID).AddBroker(broker).SetCleanSession(cleanSession).SetWill(healthTopic, `{"status":"down"}`, 1, true)
 	client := mqtt.NewClient(opts)
 
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
@@ -83,6 +83,7 @@ type MessageHandler func(topic string, message_in string) (message_out *streamer
 
 func (s *Service) Register(topic string, qos byte, handler MessageHandler) error {
 	handlerWrapper := func(c mqtt.Client, m mqtt.Message) {
+		slog.Info("Received message.", "topic", m.Topic(), "payload_len", len(m.Payload()))
 		handler(m.Topic(), string(m.Payload()))
 	}
 	s.Subscriptions[topic] = qos
@@ -95,6 +96,7 @@ func (s *Service) StartSubscriptions() error {
 		slog.Warn("No routes were detected, so nothing to subscribe to")
 		return nil
 	}
+	slog.Info("Subscribing to MQTT topics.", "topics", s.Subscriptions)
 	if token := s.Client.SubscribeMultiple(s.Subscriptions, nil); token.Wait() && token.Error() != nil {
 		return fmt.Errorf("error subscribing to topic '%v': %v", s.Subscriptions, token.Error())
 	}

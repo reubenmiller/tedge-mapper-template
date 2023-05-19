@@ -131,7 +131,7 @@ func (e *JsonnetEngine) Execute(topic, input string) (string, error) {
 	sb := strings.Builder{}
 	sb.WriteString(fmt.Sprintf("local topic = '%s';\n", topic))
 
-	inputIsObject := strings.HasPrefix(input, "{") && strings.HasSuffix(input, "}")
+	inputIsObject := json.Valid([]byte(input))
 
 	if inputIsObject {
 		sb.WriteString(fmt.Sprintf("local _input = %s;\n", input))
@@ -141,12 +141,12 @@ func (e *JsonnetEngine) Execute(topic, input string) (string, error) {
 
 	sb.WriteString("local message = if std.isObject(_input) then _input + {_ctx:: null} else _input;\n")
 	if inputIsObject {
-		sb.WriteString("local te = {lvl:0} + std.get(_input, '_ctx', {});\n")
+		sb.WriteString("local ctx = {lvl:0} + std.get(_input, '_ctx', {});\n")
 	} else {
-		sb.WriteString("local te = {lvl:0};\n")
+		sb.WriteString("local ctx = {lvl:0};\n")
 	}
 	sb.WriteString(e.template)
-	sb.WriteString(" + {message+: {_ctx: te + {lvl: std.get(te, 'lvl', 0) + 1}}}")
+	sb.WriteString(" + {message+: {_ctx+: ctx + {lvl: std.get(ctx, 'lvl', 0) + 1}}}")
 	output, err := e.vm.EvaluateAnonymousSnippet("file", sb.String())
 
 	if e.Debug() {

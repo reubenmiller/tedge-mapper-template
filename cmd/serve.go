@@ -18,6 +18,7 @@ var ArgMaxDepth int64 = 3
 var ArgBroker string
 var ArgClientID string
 var ArgDelay time.Duration
+var ArgCleanSession bool
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -39,7 +40,7 @@ Examples:
 		debug, _ := cmd.Root().PersistentFlags().GetBool("debug")
 		routeDir, _ := cmd.Root().PersistentFlags().GetString("dir")
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, routeDir, ArgMaxDepth, ArgDelay, debug)
+		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, routeDir, ArgMaxDepth, ArgDelay, debug)
 		if err != nil {
 			return err
 		}
@@ -61,6 +62,7 @@ Examples:
 func init() {
 	rootCmd.AddCommand(serveCmd)
 	serveCmd.Flags().StringVar(&ArgBroker, "host", "localhost:1883", "Broker endpoint (can included port number)")
+	serveCmd.Flags().BoolVar(&ArgCleanSession, "clean", true, "Clean session")
 	serveCmd.Flags().StringVarP(&ArgClientID, "clientid", "i", "tedge-mapper-template", "MQTT client id")
 	serveCmd.Flags().Int64Var(&ArgMaxDepth, "max-depth", 3, "Maximum recursion depth")
 	serveCmd.Flags().DurationVar(&ArgDelay, "delay", 2*time.Second, "Delay to wait after publishing a message (to prevent spamming)")

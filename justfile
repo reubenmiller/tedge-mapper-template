@@ -5,7 +5,7 @@ default:
 
 # Run locally
 start *ARGS='':
-    go run main.go serve --verbose {{ARGS}}
+    go run main.go serve {{ARGS}}
 
 # Run tests
 test *ARGS='':
@@ -30,7 +30,7 @@ release-local:
 
 # Run local container (requires ko)
 run-container-ko:
-    docker run --rm -v $(PWD)/routes:/routes -p 8080:8080 $(ko build . --local) serve --host "host.docker.internal:1883" --dir /routes --verbose
+    docker run --rm -v $(PWD)/routes:/routes -p 8080:8080 $(ko build . --local) --host "host.docker.internal:1883" --dir /routes
 
 # Build container (requires ko)
 build-container-ko:

@@ -10,7 +10,7 @@
 ### END INIT INFO
 
 dir="/var"
-cmd="/usr/bin/tedge-mapper-template --verbose --dir /etc/tedge-mapper-template/routes"
+cmd="/usr/bin/tedge-mapper-template --dir /etc/tedge-mapper-template/routes"
 user="tedge"
 
 name=$(basename "$0")

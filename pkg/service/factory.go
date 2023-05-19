@@ -2,16 +2,20 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/fatih/color"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/errors"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/jsonnet"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/routes"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/streamer"
 	"github.com/tidwall/gjson"
+	"github.com/tidwall/pretty"
 	"github.com/tidwall/sjson"
 	"golang.org/x/exp/slog"
 )
@@ -40,13 +44,13 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int64, po
 			if err != nil {
 				return nil, err
 			}
-			slog.Debug("Preprocessor output.", "output", v)
+			slog.Debug("Preprocessor m.", "output", v)
 			message = v
 		}
 
 		sm, err := stream.Process(topic, message)
 		if err != nil {
-			slog.Error("Invalid process output.", err)
+			slog.Error("Invalid process m.", err)
 			return nil, err
 		}
 
@@ -122,8 +126,8 @@ func NewMetaData() map[string]any {
 	return meta
 }
 
-func NewDefaultService(broker string, clientID string, routeDir string, maxdepth int64, postDelay time.Duration, debug bool) (*Service, error) {
-	app, err := NewService(broker, clientID)
+func NewDefaultService(broker string, clientID string, cleanSession bool, routeDir string, maxdepth int64, postDelay time.Duration, debug bool) (*Service, error) {
+	app, err := NewService(broker, clientID, cleanSession)
 	if err != nil {
 		return nil, err
 	}
@@ -154,4 +158,40 @@ func NewDefaultService(broker string, clientID string, routeDir string, maxdepth
 		}
 	}
 	return app, nil
+}
+
+func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, compact bool) bool {
+
+	header := color.New(color.Bold).Add(color.BgCyan)
+	header.Fprintf(w, "Route: %s", name)
+	fmt.Fprint(w, "\n")
+
+	fmt.Fprint(w, "\nInput Message\n")
+	fmt.Fprintf(w, "  %-10v%v\n", "topic:", in.Topic)
+	fmt.Fprintf(w, "\nOutput Message\n")
+	fmt.Fprintf(w, "  %-10s%v\n", "topic:", out.Topic)
+	fmt.Fprintf(w, "  %-10s%v\n", "end:", out.End)
+
+	if !out.Skip {
+		if out.RawMessage != "" {
+			fmt.Fprintf(w, "%s\n", out.RawMessage)
+		} else {
+			var outB []byte
+			var err error
+			if compact {
+				outB, err = json.Marshal(out.Message)
+			} else {
+				outB, err = json.MarshalIndent(out.Message, "", "  ")
+				if err == nil {
+					outB = pretty.Color(outB, nil)
+				}
+			}
+			if err != nil {
+				fmt.Fprintf(w, "\n%s\n\n", err)
+			} else {
+				fmt.Fprintf(w, "\n%s\n\n", outB)
+			}
+		}
+	}
+	return out.Skip || out.End
 }

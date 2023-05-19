@@ -1,5 +1,6 @@
 # yaml-language-server: $schema=../spec/schema.json
 ---
+disable: true
 routes:
 - name: simple measurements
   topic: tedge/measurements
@@ -26,21 +27,13 @@ routes:
   template:
     type: jsonnet
     value: |
-      local topic = '';
-      local message = '';
-      local meta = {};
-      local _ = {Now: function(){""}};
-      local te = {lvl:0};
-
-      ###
-
       {
           message: {
             c8y_Command: message,
             topic: topic,
             time: _.Now()
-          },
-          skip: te.lvl > 2,
+          },``
+          skip: ctx.lvl > 2,
           topic: std.rstripChars(topic + "/", "/"),
       }
 
@@ -49,14 +42,6 @@ routes:
   template:
     type: jsonnet
     value: |
-      local topic = '';
-      local message = '';
-      local meta = {};
-      local _ = {Now: function(){""}};
-      local te = {lvl:0};
-
-      ###
-
       {
           message: {
             c8y_Command: message,
@@ -72,17 +57,7 @@ routes:
   template:
     type: jsonnet
     value: |
-      local topic = '';
-      local message = '';
-      local meta = {};
-      local _ = {Now: function(){""}};
-      local te = {lvl:0};
-
-      # Replace All references to an internal url with the public url
-
-      ###
-
-      // NB: Recurse the main object, looking for strings to replace
+      # NB: Recurse the main object, looking for strings to replace
       local recurseReplace(any, from, to) = (
         {
           object: function(x) { [k]: recurseReplace(x[k], from, to) for k in std.objectFields(x) },
