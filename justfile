@@ -23,8 +23,7 @@ release *ARGS='':
     go run main.go completion fish > output/completions.fish
 
     docker context use default
-    # Skip publishing for docker until package is made public
-    goreleaser release --clean --auto-snapshot --skip-docker {{ARGS}}
+    goreleaser release --clean --auto-snapshot {{ARGS}}
 
 release-local:
     just -f "{{justfile()}}" release --snapshot
