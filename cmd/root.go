@@ -44,6 +44,10 @@ files which control the transformation of messages from one topic to another.
 		})))
 		return nil
 	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// By default run the serve command
+		return serveCmd.RunE(cmd, args)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -59,4 +63,5 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().Bool("debug", false, "Debug logging")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Verbose logging")
+	rootCmd.PersistentFlags().String("dir", "routes", "Route directory")
 }

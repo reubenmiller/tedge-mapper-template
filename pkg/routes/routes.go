@@ -11,7 +11,8 @@ import (
 )
 
 type Specification struct {
-	Routes []Route `yaml:"routes"`
+	Disable bool    `yaml:"disable"`
+	Routes  []Route `yaml:"routes"`
 }
 
 type Route struct {

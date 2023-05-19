@@ -29,11 +29,11 @@ Examples:
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		debug, _ := cmd.Root().PersistentFlags().GetBool("debug")
-		routeDir, _ := cmd.Flags().GetString("dir")
+		routeDir, _ := cmd.Root().PersistentFlags().GetString("dir")
 		topic, _ := cmd.Flags().GetString("topic")
 		message, _ := cmd.Flags().GetString("message")
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgDir, ArgMaxDepth, ArgDelay, debug)
+		app, err := service.NewDefaultService(ArgBroker, ArgClientID, routeDir, ArgMaxDepth, ArgDelay, debug)
 		if err != nil {
 			return err
 		}
@@ -84,5 +84,4 @@ func init() {
 	executeCmd.Flags().StringP("topic", "t", "", "Topic")
 	executeCmd.Flags().StringP("message", "m", "", "Input message")
 	executeCmd.Flags().StringP("file", "f", "", "Template file")
-	executeCmd.Flags().String("dir", "routes", "Route directory")
 }

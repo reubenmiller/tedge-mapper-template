@@ -65,7 +65,11 @@ func (s *Service) ScanMappingFiles(dir string) []routes.Route {
 			if err := yaml.Unmarshal(b, spec); err != nil {
 				return err
 			}
-			mappings = append(mappings, spec.Routes...)
+			if !spec.Disable {
+				mappings = append(mappings, spec.Routes...)
+			} else {
+				slog.Info("Skipping routes as file is marked as disabled.", "file", path)
+			}
 		}
 		return nil
 	})

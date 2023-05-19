@@ -15,7 +15,6 @@ import (
 )
 
 var ArgMaxDepth int64 = 3
-var ArgDir string
 var ArgBroker string
 var ArgClientID string
 var ArgDelay time.Duration
@@ -38,8 +37,9 @@ Examples:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		slog.Info("Starting listener")
 		debug, _ := cmd.Root().PersistentFlags().GetBool("debug")
+		routeDir, _ := cmd.Root().PersistentFlags().GetString("dir")
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgDir, ArgMaxDepth, ArgDelay, debug)
+		app, err := service.NewDefaultService(ArgBroker, ArgClientID, routeDir, ArgMaxDepth, ArgDelay, debug)
 		if err != nil {
 			return err
 		}
@@ -60,7 +60,6 @@ Examples:
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
-	serveCmd.Flags().StringVar(&ArgDir, "dir", "routes", "Directory where the routes are stored")
 	serveCmd.Flags().StringVar(&ArgBroker, "host", "localhost:1883", "Broker endpoint (can included port number)")
 	serveCmd.Flags().StringVarP(&ArgClientID, "clientid", "i", "tedge-mapper-template", "MQTT client id")
 	serveCmd.Flags().Int64Var(&ArgMaxDepth, "max-depth", 3, "Maximum recursion depth")
