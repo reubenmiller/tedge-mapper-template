@@ -1,0 +1,120 @@
+# yaml-language-server: $schema=../spec/schema.json
+---
+routes:
+- name: c8y-devicecontrol-notifications
+  topic: c8y/devicecontrol/notifications
+  template:
+    type: jsonnet
+    value: |
+      local detectType = function(m, prefix='', defaultType='unknown')
+        {
+          local _matches = [
+            item.key
+            for item in std.objectKeysValues(m)
+            if (std.isObject(item.value) || std.isArray(item.value)) && std.startsWith(item.key, prefix)
+          ],
+          type: if std.length(_matches) > 0 then _matches[0] else defaultType,
+        };
+
+      {
+          message: {
+            payload: message,
+            _ctx: {
+              serial: std.get(std.get(message, 'externalSource', {}), 'externalId', 'not-set'),
+              deviceID: std.get(message, 'deviceId', ''),
+              opType: detectType(message, 'c8y_', 'unknown').type,
+            },
+          },
+          topic: 'c8y/devicecontrol/notifications/' + $.message._ctx.serial + '/' + $.message._ctx.opType,
+          end: false,
+      }
+
+- name: shell-operation
+  topic: c8y/devicecontrol/notifications/+/c8y_Command
+  template:
+    type: jsonnet
+    value: |
+      local build_topic = function(partial)
+        local device_id = std.get(meta, 'device_id', '');
+        if ctx.serial == device_id || ctx.serial == 'not-set'  then
+          'tedge/commands/req/' + partial
+        else
+          'tedge/commands/' + ctx.serial + '/req/' + partial
+      ;
+
+      {
+          message: {
+            command: message.payload.c8y_Command,
+            _request: message.payload,
+          },
+          topic: build_topic('operations/command'),
+      }
+
+- name: restart-operation
+  topic: c8y/devicecontrol/notifications/+/c8y_Restart
+  template:
+    type: jsonnet
+    value: |
+      local build_topic = function(partial)
+        local device_id = std.get(meta, 'device_id', '');
+        if ctx.serial == device_id || ctx.serial == 'not-set'  then
+          'tedge/commands/req/' + partial
+        else
+          'tedge/commands/' + ctx.serial + '/req/' + partial
+      ;
+      {
+          message: {},
+          topic: build_topic('control/restart'),
+
+- name: software-update-operation
+  topic: c8y/devicecontrol/notifications/+/c8y_SoftwareUpdate
+  template:
+    type: jsonnet
+    value: |
+      local build_topic = function(partial)
+        local device_id = std.get(meta, 'device_id', '');
+        if ctx.serial == device_id || ctx.serial == 'not-set'  then
+          'tedge/commands/req/' + partial
+        else
+          'tedge/commands/' + ctx.serial + '/req/' + partial
+      ;
+
+      local types = std.set([
+        item.softwareType
+        for item in message.payload.c8y_SoftwareUpdate
+      ]);
+
+      {
+        message: {
+          id: "todo",
+          updateList: [
+            {
+              type: type,
+              modules: [
+                {
+                  name: software.name,
+                  version: std.strReplace(software.version, "::" + type, ""),
+                  action: software.action,
+                }
+                for software in message.payload.c8y_SoftwareUpdate
+                if software.softwareType == type
+              ]
+            }
+            for type in types
+          ]
+        },
+        topic: build_topic('software/update'),
+      }
+
+- name: unknown-operation
+  topic: c8y/devicecontrol/notifications/+/unknown
+  template:
+    type: jsonnet
+    value: |
+      {
+          message: {
+            text: 'Unknown operation type. Check the _request fragment to inspect the original message',
+            _request: message.payload,
+          },
+          topic: 'tedge/events/unknown_operation',
+      }

@@ -1,5 +1,6 @@
 # yaml-language-server: $schema=../spec/schema.json
 ---
+disable: true
 routes:
 - name: Cumulocity Operation Mapper Without Preprocessor
   skip: true
@@ -54,7 +55,7 @@ routes:
 
         # Firmware update
         '515': {
-          name: 'update_firmware',
+          name: 'firmware_update',
           message: toMapWithSplit(parts[2:], ',', ["name", "version", "url"], null),
           skip: std.length(self.message) != 3,
         },
@@ -62,14 +63,14 @@ routes:
         # Download Configuration file type
         # 524,DeviceSerial,http://www.my.url,type
         '524': {
-          name: 'update_config',
+          name: 'config_update',
           message: toMapWithSplit(parts[2:], ',', ["url", "type"], null),
           skip: std.length(self.message) != 2,
         },
 
         # local message = '529,DeviceSerial,a1,v1,url1,type1,url1,a2,v2,url2,type2,url2';
         '529': {
-          name: 'update_software',
+          name: 'software/update',
           message: {
             software: toArray(message, ["name", "version", "url", "type", "action"], 2, ',')
           },
@@ -82,5 +83,5 @@ routes:
           c:: std.get(mappings, parts[0], {skip: true, name: '', message: {}}),
           message: $.c.message,
           skip: std.get($.c, 'skip', false),
-          topic: 'tedge/operations/req/' + parts[1] + '/' + $.c.name,
+          topic: 'tedge/operations/' + parts[1] + '/req/' + $.c.name,
       }

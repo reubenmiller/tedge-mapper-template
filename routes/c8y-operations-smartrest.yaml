@@ -1,5 +1,6 @@
 # yaml-language-server: $schema=../spec/schema.json
 ---
+disable: true
 routes:
 - name: c8y-operation-smartrest
   topic: c8y/s/ds
@@ -34,7 +35,7 @@ routes:
           message: {
             command: message.command,
           },
-          topic: 'tedge/operations/req/' + message.serial + '/' + 'execute_command',
+          topic: 'tedge/commands/' + message.serial + '/req/' + 'execute_command',
       }
 
 - name: download-config-operation
@@ -52,7 +53,7 @@ routes:
     value: |
       {
           message: message.content,
-          topic: 'tedge/operations/req/' + message.serial + '/' + 'download_config',
+          topic: 'tedge/commands/' + message.serial + '/req/' + 'config_update',
       }
 
 - name: firmware-update-operation
@@ -71,7 +72,7 @@ routes:
     value: |
       {
           message: message.contents,
-          topic: 'tedge/operations/req/' + message.serial + '/' + 'download_config',
+          topic: 'tedge/commands/' + message.serial + '/req/' + 'config_update',
       }
 
 - name: software-update-operation
@@ -92,5 +93,5 @@ routes:
     value: |
       {
           message: message.contents,
-          topic: 'tedge/operations/req/' + message.serial + '/' + 'software_update',
+          topic: 'tedge/commands/req/' + message.serial + '/req/software/update',
       }
