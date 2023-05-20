@@ -42,7 +42,7 @@ flowchart TD
 
 Currently only [jsonnet](https://jsonnet.org/) is supported. However jsonnet is a very flexible template language which allows you to run your own functions.
 
-The example below shows a more complicated scenario where a template is used to replace any references to the internal Cumulocity IoT URL with the public URL (as read from the environment variables). It uses a custom function which does a recursive search for any strings which contain a wildcard pattern (though the `_.ReplacePattern` function is provided by the application and not the jsonnet library (just in case if you try to run the template on the jsonnet website ;))
+The example below shows a more complicated scenario where a template is used to replace any references to the internal Cumulocity IoT URL with the public URL (as read from the meta information). It uses a custom function which does a recursive search for any strings which contain a wildcard pattern (though the `_.ReplacePattern` function is provided by the application and not the jsonnet library (just in case if you try to run the template on the jsonnet website ;))
 
 ```jsonnet
 local recurseReplace(any, from, to) = (
@@ -59,20 +59,20 @@ local recurseReplace(any, from, to) = (
 
 # THIS PART IS THE OUTGOING MESSAGE!
 {
-  message: recurseReplace(message, 'https?://\\bt\\d+\\.cumulocity.com', meta.env.C8Y_BASEURL),
+  message: recurseReplace(message, 'https?://\\bt\\d+\\.cumulocity.com', 'https//' + std.get(meta, 'c8y_http', '')),
   end: true,
   topic: topic,
   skip: false,
 }
 ```
 
-To make the templating language more useful, additional variables are also injected into the template each time the template is applied to an incoming message.
+To make the template language more useful, additional variables are also injected into the template each time the template is applied to an incoming message.
 
 |Variable|Description|Example|
 |----|----|----|
 |`topic`|Topic of the incoming message|`c8y/s/ds/524`|
 |`message`|Payload of incoming message (most of the time this is JSON but it can be CSV|`{}`|
-|`meta`|Additional meta information which can be used within the templates (e.g. access environment variables `meta.env.<ENV_VARIABLE>`)|`{"device_id":"mydevice","env":{"C8Y_BASEURL":"https://example.cumulocity.com"}}`|
+|`meta`|Additional meta information which can be used within the templates (e.g. access environment variables `meta.env.<ENV_VARIABLE>`)|`{"device_id":"mydevice","env":{"TEDGE_ROUTE_CUSTOM_DATA":"foo/bar"}}`|
 |`ctx`|Internal Routing Context, e.g. how many levels of routes has the message or derivatives of the message|`{"lvl":0}`|
 |`_`|Object providing some additional functions like `_.Now()` to get the current timestamp in RFC3334 format|
 

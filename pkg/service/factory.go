@@ -1,10 +1,13 @@
 package service
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -19,6 +22,8 @@ import (
 	"github.com/tidwall/sjson"
 	"golang.org/x/exp/slog"
 )
+
+var TedgeBinary = "tedge"
 
 func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int, postDelay time.Duration, opts ...jsonnet.TemplateOption) MessageHandler {
 	if maxDepth <= 0 {
@@ -113,6 +118,12 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int, post
 func NewMetaData() map[string]any {
 	envMap := map[string]string{}
 	for _, env := range os.Environ() {
+		// Only include env variables starting with TEDGE_ROUTE
+		// to limit amount of spam in the templates and to limit
+		// exposing potential secrets to templates
+		if !strings.HasPrefix(env, "TEDGE_ROUTE") {
+			continue
+		}
 		key, value, found := strings.Cut(env, "=")
 		if found && value != "" {
 			envMap[key] = value
@@ -120,9 +131,28 @@ func NewMetaData() map[string]any {
 	}
 
 	meta := map[string]any{
-		"device_id": "test",
-		"type":      "thin-edge.io",
-		"env":       envMap,
+		"env": envMap,
+	}
+
+	// Add tedge config
+	if _, err := exec.LookPath(TedgeBinary); err == nil {
+		cmd, err := exec.Command("tedge", "config", "list").Output()
+		if err != nil {
+			slog.Warn("Could not get tedge config.", "error", err)
+		} else {
+			buf := bytes.NewBuffer(cmd)
+			scanner := bufio.NewScanner(buf)
+			for scanner.Scan() {
+				if key, value, found := strings.Cut(scanner.Text(), "="); found {
+					keyNormalized := strings.ReplaceAll(key, ".", "_")
+					if keyNormalized != "" && value != "" {
+						meta[keyNormalized] = value
+					}
+
+				}
+			}
+
+		}
 	}
 	return meta
 }
