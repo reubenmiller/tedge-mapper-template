@@ -240,3 +240,9 @@ docker_manifests:
   - "ghcr.io/reubenmiller/{{.ProjectName}}:{{ .Version }}-amd64"
   - "ghcr.io/reubenmiller/{{.ProjectName}}:{{ .Version }}-arm64v8"
   - "ghcr.io/reubenmiller/{{.ProjectName}}:{{ .Version }}-armv7"
+
+- name_template: "ghcr.io/reubenmiller/{{.ProjectName}}:latest"
+  image_templates:
+  - "ghcr.io/reubenmiller/{{.ProjectName}}:latest-amd64"
+  - "ghcr.io/reubenmiller/{{.ProjectName}}:latest-arm64v8"
+  - "ghcr.io/reubenmiller/{{.ProjectName}}:latest-armv7"
