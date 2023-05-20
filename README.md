@@ -19,6 +19,16 @@ In addition to the route configuration, there are also some prevention mechanism
 * Limit publishing rate (to prevent spamming)
 * Control if a message is allowed to be processed by other routes or not (via the `.end` property). Idea is to also allow the route to decide if it's messages are allowed to be accepted by other routes or not.
 
+
+### Use-cases
+
+The following use-cases are possible using the configurable mapper.
+
+* Pre process messages before other components use it (e.g. fix something automatically)
+* Split message processing logic (e.g. `A -> B -> C`)
+* React to other messages, e.g. create events on operation status updates
+* Provide state in context which is reusable across other messages
+
 ## Design
 
 Below shows a rough diagram of the flow of a single route which is listening to a specific topic.
@@ -248,7 +258,7 @@ go run main.go routes check -t 'c8y/devicecontrol/notifications' -m '{"c8y_Comma
 
 ## Building
 
-You can build the binaries for a range of targets by using the following command, though before you run it, you need to install some tooling which is used to run the projec'ts tasks.
+You can build the binaries for a range of targets by using the following command, though before you run it, you need to install some tooling which is used to run the project's tasks.
 
 * Install [just](https://just.systems/man/en/chapter_5.html)
 * Install [goreleaser](https://goreleaser.com/install/)
@@ -258,3 +268,31 @@ Once you've installed the above tools, then you can build the project using:
 ```sh
 just build
 ```
+
+## Add json handling of the notifications
+
+Note: This is only a proof of concept, it does not mean that everything will work if you follow these instructions. At the moment the only operation that really works is the install/remove software.
+
+Edit the `c8y-bridge.conf` to add a new bridge configuration so that the bridge will receive the Cumulocity operations in the json format.
+
+```sh
+/etc/tedge/mosquitto-conf/c8y-bridge.conf
+```
+
+```sh
+topic devicecontrol/notifications/# in 2 c8y/ ""
+```
+
+Additionally you can comment out the subscription to the `s/ds` topic. Afterwards it should look like this.
+
+```sh
+#topic s/ds in 2 c8y/ ""
+```
+
+Finally you will have to restart the mosquitto service.
+
+```
+sudo systemctl restart mosquitto
+```
+
+To Test it out, try installing some new software
