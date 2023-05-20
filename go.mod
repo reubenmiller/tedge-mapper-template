@@ -11,6 +11,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.2
+	github.com/teris-io/shortid v0.0.0-20220617161101-71ec9f2aa569
 	github.com/tidwall/gjson v1.14.4
 	github.com/tidwall/pretty v1.2.1
 	github.com/tidwall/sjson v1.2.5

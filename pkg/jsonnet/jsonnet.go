@@ -9,6 +9,7 @@ import (
 
 	_jsonnet "github.com/google/go-jsonnet"
 	"github.com/google/go-jsonnet/ast"
+	"github.com/teris-io/shortid"
 )
 
 var HeaderMarker = "\n###\n"
@@ -64,7 +65,7 @@ func NewEngine(tmpl string, opts ...TemplateOption) *JsonnetEngine {
 	} else {
 		sb.WriteString("local meta = {};\n")
 	}
-	sb.WriteString("local _ = {Now: function() std.native('Now')(), ReplacePattern: function(s, from, to='') std.native('ReplacePattern')(s, from, to),};\n")
+	sb.WriteString("local _ = {Now: function() std.native('Now')(), ReplacePattern: function(s, from, to='') std.native('ReplacePattern')(s, from, to),ID: function() std.native('ID')(),};\n")
 
 	sb.WriteString(removeHeader(tmpl))
 	engine.template = sb.String()
@@ -114,6 +115,16 @@ func (e *JsonnetEngine) addFunctions() {
 				return "", err
 			}
 			return pattern.ReplaceAllString(value, to), nil
+		},
+	})
+	e.vm.NativeFunction(&_jsonnet.NativeFunction{
+		Name: "ID",
+		Func: func(parameters []interface{}) (interface{}, error) {
+			v, err := shortid.Generate()
+			if err != nil {
+				return "", err
+			}
+			return v, nil
 		},
 	})
 }

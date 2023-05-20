@@ -23,6 +23,7 @@ routes:
               serial: std.get(std.get(message, 'externalSource', {}), 'externalId', 'not-set'),
               deviceID: std.get(message, 'deviceId', ''),
               opType: detectType(message, 'c8y_', 'unknown').type,
+              id: _.ID(),
             },
           },
           topic: 'c8y/devicecontrol/notifications/' + $.message._ctx.serial + '/' + $.message._ctx.opType,
@@ -86,7 +87,7 @@ routes:
 
       {
         message: {
-          id: "todo",
+          id: ctx.id,
           updateList: [
             {
               type: type,
