@@ -47,10 +47,12 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int, post
 			slog.Debug("Applying preprocessor to message")
 			v, err := route.ExecutePreprocessor(message)
 			if err != nil {
-				return nil, err
+				// TODO: Should preprocessor errors be logged instead of returning early
+				return nil, fmt.Errorf("preprocessor error. %s, message=%s", err, message)
+			} else {
+				slog.Debug("Preprocessor m.", "output", v)
+				message = v
 			}
-			slog.Debug("Preprocessor m.", "output", v)
-			message = v
 		}
 
 		sm, err := stream.Process(topic, message)

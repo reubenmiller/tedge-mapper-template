@@ -78,7 +78,7 @@ Examples:
 								jsonnet.WithDebug(debug),
 							)
 
-							output, err := handler(msg.Topic, msg.Message.(string))
+							output, err := handler(msg.Topic, msg.MessageString())
 							if err != nil {
 								slog.Error("handler returned an error.", "err", err)
 								done <- struct{}{}

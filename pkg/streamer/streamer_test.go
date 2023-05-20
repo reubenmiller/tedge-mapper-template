@@ -9,14 +9,15 @@ import (
 
 func Test_StreamerProcessJsonnet(t *testing.T) {
 	testcases := []struct {
-		Topic         string
-		Template      string
-		Message       string
-		ExpectedTopic string
-		ExpectedMsg   string
-		ExpectedEnd   bool
-		ExpectedSkip  bool
-		ExpectedErr   error
+		Topic             string
+		Template          string
+		Message           string
+		ExpectedTopic     string
+		ExpectedMsgIsText bool
+		ExpectedMsg       string
+		ExpectedEnd       bool
+		ExpectedSkip      bool
+		ExpectedErr       error
 	}{
 		{
 			Topic:    "in",
@@ -119,6 +120,26 @@ func Test_StreamerProcessJsonnet(t *testing.T) {
 				}
 			`,
 		},
+		{
+			Topic: "in",
+			Template: `
+				{
+					topic: 'fixed',
+					raw_message: '201,custom template',
+					message: {
+						_ctx: {
+							otherdata: {
+								disable: true,
+							},
+						},
+					},
+				}
+			`,
+			Message:           `{}`,
+			ExpectedTopic:     "fixed",
+			ExpectedMsgIsText: true,
+			ExpectedMsg:       `201,custom template`,
+		},
 	}
 
 	for _, c := range testcases {
@@ -133,7 +154,11 @@ func Test_StreamerProcessJsonnet(t *testing.T) {
 		}
 
 		if c.ExpectedMsg != "" {
-			assert.JSONEq(t, c.ExpectedMsg, out.MessageString())
+			if c.ExpectedMsgIsText {
+				assert.Equal(t, c.ExpectedMsg, out.MessageString())
+			} else {
+				assert.JSONEq(t, c.ExpectedMsg, out.MessageString())
+			}
 		}
 		assert.Equal(t, c.ExpectedTopic, out.Topic)
 		assert.Equal(t, c.ExpectedEnd, out.End)

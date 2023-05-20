@@ -145,7 +145,8 @@ func (r *Route) ExecutePreprocessor(in string) (string, error) {
 	}
 
 	if err != nil {
-		return "", err
+		// ignore invalid csv
+		return "", nil
 	}
 
 	if len(fields) >= len(r.PreProcessor.fixedFields) {
