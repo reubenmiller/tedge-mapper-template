@@ -187,7 +187,7 @@ dockers:
   - 
     image_templates:
       - "ghcr.io/reubenmiller/{{.ProjectName}}:{{ .Version }}-amd64"
-      # - "ghcr.io/reubenmiller/{{.ProjectName}}:{{ .Tag }}"
+      - "ghcr.io/reubenmiller/{{.ProjectName}}:latest-amd64"
     goos: linux
     goarch: amd64
     goamd64: 'v1'
@@ -204,7 +204,7 @@ dockers:
   - 
     image_templates:
       - "ghcr.io/reubenmiller/{{.ProjectName}}:{{ .Version }}-arm64v8"
-      # - "ghcr.io/reubenmiller/{{.ProjectName}}:{{ .Tag }}"
+      - "ghcr.io/reubenmiller/{{.ProjectName}}:latest-arm64v8"
     goos: linux
     goarch: arm64
     dockerfile: images/Dockerfile
@@ -220,7 +220,7 @@ dockers:
   - 
     image_templates:
       - "ghcr.io/reubenmiller/{{.ProjectName}}:{{ .Version }}-armv7"
-      # - "ghcr.io/reubenmiller/{{.ProjectName}}:{{ .Tag }}"
+      - "ghcr.io/reubenmiller/{{.ProjectName}}:latest-armv7"
     goos: linux
     goarch: arm
     goarm: '7'
