@@ -89,6 +89,16 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int, post
 			}
 		}
 
+		if sm.DisableContext() {
+			// TODO: Check that the message will not trigger other routes (since the infinite loop is being disabled)
+			if o, err := sjson.DeleteBytes(output, "_ctx"); err == nil {
+				output = o
+				slog.Info("Removing context from message.", "topic", sm.Topic, "message", string(output))
+			} else {
+				slog.Info("Failed to remove context from message.", "topic", sm.Topic, "message", string(output), "error", err)
+			}
+		}
+
 		if sm.Skip {
 			slog.Info("skip.", "topic", sm.Topic, "message", string(output))
 		} else {

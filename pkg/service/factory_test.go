@@ -10,6 +10,65 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func Test_RemoveContext(t *testing.T) {
+	route := routes.Route{
+		Name:  "Recursive route",
+		Topic: "in",
+		Template: routes.Template{
+			Type: "jsonnet",
+			Value: `
+				{
+					topic: 'in',
+					message: {
+						value: 1
+					},
+					context: false,
+				}
+			`,
+		},
+	}
+
+	testcases := []struct {
+		Name          string
+		Route         routes.Route
+		Topic         string
+		Template      string
+		Message       string
+		ExpectedMsg   string
+		ExpectedError error
+	}{
+		{
+			Route:   route,
+			Topic:   "in",
+			Message: `{}`,
+			Template: `
+				{
+					topic: 'out',
+					message: {
+						value: 1
+					},
+					context: false,
+				}
+			`,
+			ExpectedMsg: `
+				{
+					"value": 1
+				}
+			`,
+			// ExpectedError: errors.ErrRecursiveLevelExceeded,
+		},
+	}
+
+	for _, c := range testcases {
+		route.Template = c.Route.Template
+		handler := NewStreamFactory(nil, c.Route, 2, 0)
+		out, err := handler(c.Topic, c.Message)
+		assert.NoError(t, err)
+		assert.JSONEq(t, c.ExpectedMsg, out.MessageString())
+	}
+
+}
+
 func Test_MaxDepthLimit(t *testing.T) {
 	recursiveRoute := routes.Route{
 		Name:  "Recursive route",

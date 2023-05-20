@@ -16,12 +16,20 @@ type OutputMessage struct {
 	RawMessage string `json:"raw_message,omitempty"`
 	Skip       bool   `json:"skip"`
 	End        bool   `json:"end"`
+	Context    *bool  `json:"context,omitempty"`
 }
 
 func NewStreamer(engine template.Templater) *Streamer {
 	return &Streamer{
 		Engine: engine,
 	}
+}
+
+func (m *OutputMessage) DisableContext() bool {
+	if m.Context == nil {
+		return false
+	}
+	return !*m.Context
 }
 
 func (m *OutputMessage) MessageString() string {
