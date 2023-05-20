@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=../spec/schema.json
+---
+routes:
+- name: monitor 
+  topic: tedge/health/+
+  description: |
+    Create events when a service health changes (or is re-sent)
+
+    If the service name is tedge-mapper-c8y, then it should create/clear
+    a Cumulocity IoT alarm instead of sending an event, and the alarm should
+    be sent directly to the cloud.
+  template:
+    type: jsonnet
+    value: |
+      local serviceName = std.split(topic, '/')[2];
+      local status = std.get(message, 'status', 'unknown');
+
+      local alarm = function() std.get({
+          up: {
+            topic: 'c8y/s/us',
+            raw_message: '306,tedge_service_down_%s' % serviceName,
+          },
+          down: {
+            topic: 'c8y/alarm/alarms/create',
+            message: {
+              type: 'tedge_service_down_%s' % serviceName,
+              text: 'The %s is down' % serviceName,
+              severity: 'MAJOR',
+              time: _.Now()
+            },
+            text: 'The %s is down' % serviceName,
+          },
+        }, status, {});
+
+      local event = function() {
+          message: {
+            text: '%s service is %s' % [serviceName, status],
+          },
+          topic: 'tedge/events/service_%s_%s' % [status, serviceName],
+      };
+
+      local out_message = if serviceName == 'tedge-mapper-c8y' then alarm() else event();
+      out_message + { skip: std.length(out_message) == 0 }
