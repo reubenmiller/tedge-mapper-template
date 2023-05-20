@@ -34,8 +34,9 @@ Examples:
 		topic, _ := cmd.Flags().GetString("topic")
 		message, _ := cmd.Flags().GetString("message")
 		compact, _ := cmd.Flags().GetBool("compact")
+		maxDepth, _ := cmd.Root().PersistentFlags().GetInt("maxdepth")
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, routeDir, ArgMaxDepth, ArgDelay, debug)
+		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, routeDir, maxDepth, ArgDelay, debug)
 		if err != nil {
 			return err
 		}
@@ -72,7 +73,7 @@ Examples:
 
 							foundRoute = true
 							// cmd.Printf("Route:\t%s\n", route.Name)
-							handler := service.NewStreamFactory(nil, route, 1, 0,
+							handler := service.NewStreamFactory(nil, route, maxDepth, 0,
 								jsonnet.WithMetaData(meta),
 								jsonnet.WithDebug(debug),
 							)

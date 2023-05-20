@@ -187,6 +187,65 @@ The `download-config-operation` route, then reacts and transforms the CSV messag
 
 The `_ctx` fragment is automatically added to the message payload to try and prevent infinite loops. Each time the JSON payload goes through a route, the `_ctx.lvl` will increase by one. Currently the route counter is only added to JSON message (not CSV) due to a limitation. In the future only JSON formats will be supported, so this should not be too limiting. The other two properties, `type` and `url` have been added by the route during the conversion from CSV to JSON (using the in-built preprocessor block). Once the message is in the JSON format, it is much easier for plugins to handle the data, and add/remove fragments as needed.
 
+## Checking routes offline
+
+Routes allow users to transform incoming messages and generate new messages as a result. This means you can also chain routes together by configuring one route to publish to another route. Even complicated changes like `A -> B -> C -> D` are possible.
+
+To make it easier to develop complex chained routes, or if you are just wanting to experiment with the template language, then you can check how your routes respond to different topics/message offline using the following command:
+
+```sh
+go run main.go routes check -t 'c8y/devicecontrol/notifications' -m '{}' --silent
+```
+
+*Output*
+
+```sh
+Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
+
+Input Message
+  topic:    c8y/devicecontrol/notifications
+
+Output Message
+  topic:    c8y/devicecontrol/notifications/not-set/unknown
+  end:      false
+
+{
+  "_ctx": {
+    "deviceID": "",
+    "lvl": 1,
+    "opType": "unknown",
+    "serial": "not-set"
+  },
+  "payload": {}
+}
+
+Route: unknown-operation (c8y/devicecontrol/notifications/+/unknown)
+
+Input Message
+  topic:    c8y/devicecontrol/notifications/not-set/unknown
+
+Output Message
+  topic:    tedge/events/unknown_operation
+  end:      false
+
+{
+  "_ctx": {
+    "deviceID": "",
+    "lvl": 2,
+    "opType": "unknown",
+    "serial": "not-set"
+  },
+  "_request": {},
+  "text": "Unknown operation type. Check the _request fragment to inspect the original message"
+}
+```
+
+Or you can provide more complicated JSON via the `--message/-m` flag.
+
+```sh
+go run main.go routes check -t 'c8y/devicecontrol/notifications' -m '{"c8y_Command":{"text":"ls -l"}}' --silent
+```
+
 ## Building
 
 You can build the binaries for a range of targets by using the following command, though before you run it, you need to install some tooling which is used to run the projec'ts tasks.

@@ -20,7 +20,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int64, postDelay time.Duration, opts ...jsonnet.TemplateOption) MessageHandler {
+func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int, postDelay time.Duration, opts ...jsonnet.TemplateOption) MessageHandler {
 	if maxDepth <= 0 {
 		maxDepth = 3
 	}
@@ -65,12 +65,13 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int64, po
 			return nil, err
 		}
 
-		if route.Match(sm.Topic) {
-			if n := gjson.GetBytes(output, "_ctx.lvl"); n.Exists() {
-				if n.Int() > maxDepth {
-					slog.Warn("Nested level exceeded.", "topic", sm.Topic, "message", string(output))
-					return nil, errors.ErrRecursiveLevelExceeded
-				}
+		// Apply depth limit to all messages, and not just a message
+		// which generates a message from the same topic to protect against
+		// infinite loops via multiple routes, e.g.: A -> B -> C -> A (not just A -> A)
+		if n := gjson.GetBytes(output, "_ctx.lvl"); n.Exists() {
+			if n.Int() > int64(maxDepth) {
+				slog.Warn("Nested level exceeded.", "topic", sm.Topic, "message", string(output), "limit", maxDepth)
+				return nil, errors.ErrRecursiveLevelExceeded
 			}
 		}
 
@@ -126,7 +127,7 @@ func NewMetaData() map[string]any {
 	return meta
 }
 
-func NewDefaultService(broker string, clientID string, cleanSession bool, routeDir string, maxdepth int64, postDelay time.Duration, debug bool) (*Service, error) {
+func NewDefaultService(broker string, clientID string, cleanSession bool, routeDir string, maxdepth int, postDelay time.Duration, debug bool) (*Service, error) {
 	app, err := NewService(broker, clientID, cleanSession)
 	if err != nil {
 		return nil, err

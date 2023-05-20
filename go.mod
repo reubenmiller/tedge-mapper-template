@@ -3,6 +3,7 @@ module github.com/reubenmiller/tedge-mapper-template
 go 1.20
 
 require (
+	github.com/MakeNowJust/heredoc/v2 v2.0.1
 	github.com/eclipse/paho.mqtt.golang v1.4.2
 	github.com/fatih/color v1.15.0
 	github.com/google/go-jsonnet v0.20.0

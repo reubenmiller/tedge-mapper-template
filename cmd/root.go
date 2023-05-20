@@ -29,12 +29,15 @@ files which control the transformation of messages from one topic to another.
 	Version: fmt.Sprintf("%s (branch=%s)", buildVersion, buildBranch),
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		debug, _ := cmd.Root().PersistentFlags().GetBool("debug")
+		silent, _ := cmd.Root().PersistentFlags().GetBool("silent")
 		loglevel, _ := cmd.Root().PersistentFlags().GetString("loglevel")
 		showTimestamps, _ := cmd.Root().PersistentFlags().GetBool("timestamps")
 
 		logLevel := GetLogLevel(loglevel)
 		if debug {
 			logLevel = slog.LevelDebug
+		} else if silent {
+			logLevel = slog.LevelWarn
 		}
 
 		// set global logger with custom options
@@ -81,7 +84,9 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable template debugging")
+	rootCmd.PersistentFlags().BoolP("silent", "s", false, "Silent mode. Only log warnings and errors (shortcut for --loglevel=warn)")
 	rootCmd.PersistentFlags().String("loglevel", "info", "Log level: debug, info, warn, error")
 	rootCmd.PersistentFlags().Bool("timestamps", true, "Show date/time in log entries")
 	rootCmd.PersistentFlags().String("dir", "routes", "Route directory")
+	rootCmd.PersistentFlags().Int("maxdepth", 3, "Maximum recursion depth")
 }

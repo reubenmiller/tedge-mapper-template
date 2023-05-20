@@ -55,3 +55,49 @@ func TestCSVPreprocessor(t *testing.T) {
 	assert.Equal(t, newMessage.Software[1].Version, "2.0.0")
 	assert.Equal(t, newMessage.Software[1].Url, "http://hello.world2.com")
 }
+
+func Test_RoutePatternMatch(t *testing.T) {
+	testcases := []struct {
+		TopicPattern string
+		Topic        string
+		Expected     bool
+	}{
+		{
+			TopicPattern: "in",
+			Topic:        "in",
+			Expected:     true,
+		},
+		{
+			TopicPattern: "in",
+			Topic:        "out",
+			Expected:     false,
+		},
+		{
+			TopicPattern: "input/+/something",
+			Topic:        "input/value/something",
+			Expected:     true,
+		},
+		{
+			TopicPattern: "input/+/something",
+			Topic:        "input/value/something/else",
+			Expected:     false,
+		},
+		{
+			TopicPattern: "input/+/something/#",
+			Topic:        "input/value/something/else",
+			Expected:     true,
+		},
+		{
+			TopicPattern: "input/+/+/+",
+			Topic:        "input/one/two/three",
+			Expected:     true,
+		},
+	}
+
+	for _, c := range testcases {
+		route := Route{
+			Topic: c.TopicPattern,
+		}
+		assert.Equal(t, c.Expected, route.Match(c.Topic))
+	}
+}

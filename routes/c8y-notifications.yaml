@@ -20,12 +20,13 @@ routes:
           message: {
             payload: message,
             _ctx: {
-              serial: std.get(message.externalSource, 'externalId', ''),
+              serial: std.get(std.get(message, 'externalSource', {}), 'externalId', 'not-set'),
               deviceID: std.get(message, 'deviceId', ''),
               opType: detectType(message, 'c8y_', 'unknown').type,
             },
           },
           topic: 'c8y/devicecontrol/notifications/' + $.message._ctx.serial + '/' + $.message._ctx.opType,
+          end: false,
       }
 
 - name: shell-operation
