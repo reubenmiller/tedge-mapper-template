@@ -10,6 +10,7 @@ import (
 	_jsonnet "github.com/google/go-jsonnet"
 	"github.com/google/go-jsonnet/ast"
 	"github.com/teris-io/shortid"
+	"github.com/tidwall/gjson"
 )
 
 var HeaderMarker = "\n###\n"
@@ -65,7 +66,7 @@ func NewEngine(tmpl string, opts ...TemplateOption) *JsonnetEngine {
 	} else {
 		sb.WriteString("local meta = {};\n")
 	}
-	sb.WriteString("local _ = {Now: function() std.native('Now')(), ReplacePattern: function(s, from, to='') std.native('ReplacePattern')(s, from, to),ID: function() std.native('ID')(),};\n")
+	sb.WriteString("local _ = {Now: function() std.native('Now')(), Get: function(o, key, defaultValue=null) std.native('Get')(o, key, defaultValue), ReplacePattern: function(s, from, to='') std.native('ReplacePattern')(s, from, to),ID: function() std.native('ID')(),};\n")
 
 	sb.WriteString(removeHeader(tmpl))
 	engine.template = sb.String()
@@ -81,6 +82,13 @@ func getStringParameter(parameters []interface{}, i int) string {
 		return fmt.Sprintf("%v", parameters[i])
 	}
 	return ""
+}
+
+func getParameter(parameters []interface{}, i int) any {
+	if len(parameters) > 0 && i < len(parameters) {
+		return parameters[i]
+	}
+	return nil
 }
 
 func (e *JsonnetEngine) Debug() bool {
@@ -125,6 +133,27 @@ func (e *JsonnetEngine) addFunctions() {
 				return "", err
 			}
 			return v, nil
+		},
+	})
+
+	e.vm.NativeFunction(&_jsonnet.NativeFunction{
+		Name:   "Get",
+		Params: ast.Identifiers{"obj", "prop", "default"},
+		Func: func(parameters []interface{}) (interface{}, error) {
+			obj := getParameter(parameters, 0)
+			key := getStringParameter(parameters, 1)
+			defaultValue := getParameter(parameters, 2)
+
+			// TODO: Try to avoid converting from map to json again
+			objB, err := json.Marshal(obj)
+			if err != nil {
+				return defaultValue, nil
+			}
+
+			if v := gjson.GetBytes(objB, key); v.Exists() {
+				return v.Value(), nil
+			}
+			return defaultValue, nil
 		},
 	})
 }
