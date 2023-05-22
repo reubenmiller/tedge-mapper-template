@@ -39,7 +39,10 @@ routes:
               'https://' + std.get(meta, 'c8y_http', std.get(meta.env, 'TEDGE_ROUTE_C8Y_BASEURL', ''))
             ),
             _ctx: {
-              serial: std.get(std.get(message, 'externalSource', {}), 'externalId', 'not-set'),
+              local external_childid = _.Get(message, 'deviceExternalIDs.externalIds.0.externalId', null),
+              local external_id = _.Get(message, 'externalSource.externalId', 'not-set'),
+
+              serial: if external_childid != null then external_childid else external_childid,
               deviceID: std.get(message, 'deviceId', ''),
               agentID: std.get(message, 'agentId', ''),
               operationID: std.get(message, 'id', ''),
@@ -171,6 +174,34 @@ routes:
           ]
         },
         topic: build_topic('software/update'),
+        end: true,
+        context: false,
+      }
+  
+- name: firmware-update-operation
+  topic: c8y/devicecontrol/notifications/+/c8y_Firmware
+  template:
+    type: jsonnet
+    value: |
+      local build_topic = function(partial)
+        local device_id = std.get(meta, 'device_id', '');
+        if ctx.serial == device_id || ctx.serial == 'not-set'  then
+          'tedge/commands/req/' + partial
+        else
+          'tedge/' + ctx.serial + '/commands/req/' + partial
+      ;
+
+      local params = std.get(message.payload, ctx.opType, {});
+
+      {
+        message: {
+          id: if 'operationID' in ctx then ctx.operationID else ctx.ID,
+          name: params.name,
+          url: params.url,
+          version: params.version,
+          sha256: '',
+        },
+        topic: build_topic('firmware_update'),
         end: true,
         context: false,
       }
