@@ -99,20 +99,21 @@ routes:
     value: |
       local build_topic = function(partial)
         local device_id = std.get(meta, 'device_id', '');
-        if ctx.serial == device_id || ctx.serial == 'not-set'  then
+        if ctx.serial == device_id || ctx.serial == 'not-set' then
           'tedge/commands/req/' + partial
         else
-          'tedge/commands/' + ctx.serial + '/req/' + partial
+          'tedge/' + serial + '/commands/req/' + partial
       ;
-      local fragment = std.get(message.payload, 'c8y_UploadConfigFile', {});
+      local params = std.get(message.payload, 'c8y_UploadConfigFile', {});
       {
+          local configType = std.get(params, 'type', ''),
           message: {
             # Hide id for now
             id:: ctx.id,
-            type: std.get(fragment, 'type', ''),
-            url.get(fragment, 'url', '')
+            type: configType,
+            url: 'http://0.0.0.0:8000/tedge/file-transfer/%s/%s/%s' % [ctx.serial, 'config_snapshot', configType],
           },
-          topic: build_topic('config/update'),
+          topic: build_topic('config_snapshot'),
       }
 
 - name: download-config-operation
@@ -133,7 +134,7 @@ routes:
             type: std.get(fragment, 'type', ''),
             url: std.get(fragment, 'url', ''),
           },
-          topic: build_topic('config/update'),
+          topic: build_topic('config_update'),
       }
 
 - name: software-update-operation
