@@ -163,7 +163,23 @@ func NewMetaData() map[string]any {
 
 				}
 			}
-
+		}
+	} else {
+		// TESTING ONLY: Provide a way for testing without having tedge installed
+		// The environment variables will be normalized to mimic the tedge config list
+		// settings.
+		for _, env := range os.Environ() {
+			// Only include env variables starting with TEDGE_ROUTE
+			// to limit amount of spam in the templates and to limit
+			// exposing potential secrets to templates
+			if !strings.HasPrefix(env, "TEDGE_") && !strings.HasPrefix(env, "TEDGE_ROUTE") {
+				continue
+			}
+			key, value, found := strings.Cut(env, "=")
+			if found && value != "" {
+				keyNormalized := strings.ToLower(strings.ReplaceAll(strings.TrimPrefix(key, "TEDGE_"), ".", "_"))
+				meta[keyNormalized] = value
+			}
 		}
 	}
 	return meta
