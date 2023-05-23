@@ -147,11 +147,13 @@ routes:
         if ctx.serial == device_id || ctx.serial == 'not-set'  then
           'tedge/commands/req/' + partial
         else
-          'tedge/commands/' + ctx.serial + '/req/' + partial
+          'tedge/%s/commands/req/%s' %[ctx.localSerial, partial]
       ;
 
+      local defaultType = std.get(meta, 'software_plugin_default', 'apt');
+
       local types = std.set([
-        item.softwareType
+        std.get(item, 'softwareType', defaultType)
         for item in message.payload.c8y_SoftwareUpdate
       ]);
 
@@ -168,7 +170,7 @@ routes:
                   action: software.action,
                 }
                 for software in message.payload.c8y_SoftwareUpdate
-                if software.softwareType == type
+                if std.get(software, 'softwareType', defaultType) == type
               ]
             }
             for type in types
