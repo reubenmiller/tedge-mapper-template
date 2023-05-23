@@ -39,10 +39,14 @@ routes:
               'https://' + std.get(meta, 'c8y_http', std.get(meta.env, 'TEDGE_ROUTE_C8Y_BASEURL', ''))
             ),
             _ctx: {
+              local _ctx = self,
               local external_childid = _.Get(message, 'deviceExternalIDs.externalIds.0.externalId', null),
               local external_id = _.Get(message, 'externalSource.externalId', 'not-set'),
+              local device_id = std.get(meta, 'device_id', ''),
 
-              serial: if external_childid != null then external_childid else external_childid,
+              serial: if external_childid != null then external_childid else external_id, 
+              localSerial: if std.startsWith(_ctx.serial, device_id) then _ctx.serial[std.length(device_id)+1:] else _ctx.serial,
+
               deviceID: std.get(message, 'deviceId', ''),
               agentID: std.get(message, 'agentId', ''),
               operationID: std.get(message, 'id', ''),
@@ -226,7 +230,7 @@ routes:
 #
 # Operation Transitions
 #
-- name: status updates
+- name: software update (main device)
   topic: tedge/commands/res/software/update
   description: Handle the operation updates and send the status back to the cloud
   template:
@@ -248,4 +252,28 @@ routes:
       {
         raw_message: getTemplate(status),
         topic: 'c8y/s/us',
+      }
+
+- name: software update (child devices)
+  topic: tedge/+/commands/res/software/update
+  description: Handle the operation updates and send the status back to the cloud
+  template:
+    type: jsonnet
+    value: |
+      local id = std.get(message, 'id', 'unknown');
+      local status = std.get(message, 'status', 'unknown');
+      local reason = std.get(message, 'reason', 'unknown');
+
+      local getTemplate = function(s)
+        local states = {
+          executing: '501,c8y_SoftwareUpdate',
+          successful: '503,c8y_SoftwareUpdate',
+          failed: '502,c8y_SoftwareUpdate,"%s"' % reason,
+        };
+        std.get(states, s, '400,tedge_custom_mapper,"Unexpected operation state. id=%s, state=%s"' % [id, s])
+      ;
+
+      {
+        raw_message: getTemplate(status),
+        topic: 'c8y/s/us/%s' % ctx.serial,
       }
