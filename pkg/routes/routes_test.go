@@ -56,6 +56,39 @@ func TestCSVPreprocessor(t *testing.T) {
 	assert.Equal(t, newMessage.Software[1].Url, "http://hello.world2.com")
 }
 
+func TestCSVPreprocessorWithCustomOptions(t *testing.T) {
+	route := &Route{
+		PreProcessor: &PreProcessor{
+			Type:      "csv",
+			Delimiter: ":",
+			TrimSpace: true,
+			Fields: []string{
+				"time",
+				"val1",
+				"val2",
+			},
+		},
+	}
+
+	if err := route.PreparePreProcessor(); err != nil {
+		t.Errorf("Prepare preprocessor failed. got=%s", err)
+	}
+
+	out, err := route.ExecutePreprocessor("1684945201.643:2:12510 ")
+	if err != nil {
+		t.Errorf("Expected no error. got=%s", err)
+	}
+
+	assert.JSONEq(t, `
+	{
+		"time": "1684945201.643",
+		"val1": "2",
+		"val2": "12510",
+		"payload": "1684945201.643:2:12510 "
+	}
+	`, out)
+}
+
 func Test_RoutePatternMatch(t *testing.T) {
 	testcases := []struct {
 		TopicPattern string

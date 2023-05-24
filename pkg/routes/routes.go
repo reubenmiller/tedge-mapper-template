@@ -31,6 +31,8 @@ type Template struct {
 
 type PreProcessor struct {
 	Type           string   `yaml:"type"`
+	Delimiter      string   `yaml:"delimiter"`
+	TrimSpace      bool     `yaml:"trimspace"`
 	Fields         []string `yaml:"fields"`
 	fixedFields    []string
 	variableFields []string
@@ -147,11 +149,19 @@ func (r *Route) ExecutePreprocessor(in string) (string, error) {
 		return in, nil
 	}
 
+	// Remove any NUL characters as they usually case
+	// unexpected problem with variable text based parsers
+	in = strings.ReplaceAll(in, "\x00", "")
+
 	inR := strings.NewReader(in)
 	csvReader := csv.NewReader(inR)
 
 	outS := "{}"
 
+	if r.PreProcessor.Delimiter != "" {
+		c := []rune(r.PreProcessor.Delimiter)
+		csvReader.Comma = c[0]
+	}
 	fields, err := csvReader.Read()
 	if err == io.EOF {
 		return "", nil
@@ -165,7 +175,11 @@ func (r *Route) ExecutePreprocessor(in string) (string, error) {
 	if len(fields) >= len(r.PreProcessor.fixedFields) {
 		for i, name := range r.PreProcessor.fixedFields {
 			if name != "" && name != "-" {
-				if s, err := sjson.Set(outS, name, fields[i]); err == nil {
+				value := fields[i]
+				if r.PreProcessor.TrimSpace {
+					value = strings.TrimSpace(value)
+				}
+				if s, err := sjson.Set(outS, name, value); err == nil {
 					outS = s
 				}
 			}
@@ -185,7 +199,13 @@ func (r *Route) ExecutePreprocessor(in string) (string, error) {
 				name := r.PreProcessor.variableFields[j%chunkSize]
 				if name != "" && name != "-" {
 					curField := strings.Replace(name, "*", fmt.Sprintf("%d", j/chunkSize), 1)
-					if s, err := sjson.Set(outS, curField, fields[i]); err == nil {
+
+					value := fields[i]
+					if r.PreProcessor.TrimSpace {
+						value = strings.TrimSpace(value)
+					}
+
+					if s, err := sjson.Set(outS, curField, value); err == nil {
 						outS = s
 					}
 				}

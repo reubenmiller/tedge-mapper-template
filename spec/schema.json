@@ -50,6 +50,14 @@
                         "csv"
                     ]
                 },
+                "delimiter": {
+                    "type": "string",
+                    "maxLength": 1
+                },
+                "trimspace": {
+                    "type": "boolean",
+                    "default": true
+                },
                 "fields": {
                     "type": "array",
                     "items": {
