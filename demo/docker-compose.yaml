@@ -1,0 +1,18 @@
+version: '3'
+services:
+  tedge:
+    build:
+      dockerfile: ./images/main.dockerfile
+    privileged: true
+    networks:
+    - tedge
+
+  child01:
+    build:
+      dockerfile: ./images/child.dockerfile
+    privileged: true
+    networks:
+    - tedge
+
+networks:
+  tedge:

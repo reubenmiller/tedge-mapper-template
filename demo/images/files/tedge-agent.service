@@ -1,0 +1,16 @@
+[Unit]
+Description=tedge-agent is a thin-edge.io component to support operations.
+After=syslog.target network.target mosquitto.service
+
+[Service]
+User=tedge
+RuntimeDirectory=tedge-agent
+Environment="EXP_TOPIC_PREFIX=tedge/child01"
+Environment="TEDGE_MQTT_CLIENT_HOST=tedge"
+ExecStart=/usr/bin/tedge-agent --client-id child01
+Restart=on-failure
+RestartPreventExitStatus=255
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
