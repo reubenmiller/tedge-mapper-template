@@ -67,7 +67,7 @@ Examples:
 					for _, route := range routes {
 						if !route.Skip {
 							if !route.Match(msg.Topic) {
-								slog.Debug("Route did not match topic.", "route", route.Name, "root_topic", route.Topic, "topic", topic)
+								slog.Debug("Route did not match topic.", "route", route.Name, "root_topic", route.DisplayTopics(), "topic", topic)
 								continue
 							}
 
@@ -85,7 +85,7 @@ Examples:
 								return
 							}
 
-							if stop := service.DisplayMessage(fmt.Sprintf("%s (%s)", route.Name, route.Topic), &imsg, output, cmd.ErrOrStderr(), compact); stop {
+							if stop := service.DisplayMessage(fmt.Sprintf("%s (%s)", route.Name, route.DisplayTopics()), &imsg, output, cmd.ErrOrStderr(), compact); stop {
 								done <- struct{}{}
 								return
 							}

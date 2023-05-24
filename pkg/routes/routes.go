@@ -17,7 +17,7 @@ type Specification struct {
 
 type Route struct {
 	Name         string        `yaml:"name"`
-	Topic        string        `yaml:"topic"`
+	Topics       []string      `yaml:"topics"`
 	Skip         bool          `yaml:"skip"`
 	Template     Template      `yaml:"template"`
 	PreProcessor *PreProcessor `yaml:"preprocessor,omitempty"`
@@ -34,6 +34,14 @@ type PreProcessor struct {
 	Fields         []string `yaml:"fields"`
 	fixedFields    []string
 	variableFields []string
+}
+
+func (r *Route) DisplayTopics(sep ...string) string {
+	delim := ", "
+	if len(sep) > 0 {
+		delim = sep[0]
+	}
+	return strings.Join(r.Topics, delim)
 }
 
 func (r *Route) PreparePreProcessor() error {
@@ -126,7 +134,12 @@ func routeSplit(route string) []string {
 // match takes the topic string of the published message and does a basic compare to the
 // string of the current Route, if they match it returns true
 func (r *Route) Match(topic string) bool {
-	return r.Topic == topic || routeIncludesTopic(r.Topic, topic)
+	for _, routeTopic := range r.Topics {
+		if routeTopic == topic || routeIncludesTopic(routeTopic, topic) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Route) ExecutePreprocessor(in string) (string, error) {

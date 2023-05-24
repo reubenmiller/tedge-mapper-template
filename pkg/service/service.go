@@ -81,13 +81,19 @@ func (s *Service) ScanMappingFiles(dir string) []routes.Route {
 
 type MessageHandler func(topic string, message_in string) (message_out *streamer.OutputMessage, err error)
 
-func (s *Service) Register(topic string, qos byte, handler MessageHandler) error {
+func (s *Service) Register(topics []string, qos byte, handler MessageHandler) error {
 	handlerWrapper := func(c mqtt.Client, m mqtt.Message) {
 		slog.Info("Received message.", "topic", m.Topic(), "payload_len", len(m.Payload()))
 		handler(m.Topic(), string(m.Payload()))
 	}
-	s.Subscriptions[topic] = qos
-	s.Client.AddRoute(topic, handlerWrapper)
+
+	for _, topic := range topics {
+		if _, exists := s.Subscriptions[topic]; exists {
+			slog.Warn("Duplicate topic detected. The new handler will replace the previous one.", "topic", topic)
+		}
+		s.Subscriptions[topic] = qos
+		s.Client.AddRoute(topic, handlerWrapper)
+	}
 	return nil
 }
 

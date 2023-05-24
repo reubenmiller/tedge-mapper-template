@@ -3,7 +3,8 @@
 disable: true
 routes:
 - name: c8y-operation-smartrest
-  topic: c8y/s/ds
+  topics:
+    - c8y/s/ds
   preprocessor:
     type: csv
     fields:
@@ -20,7 +21,8 @@ routes:
       }
 
 - name: shell-operation
-  topic: c8y/s/ds/511
+  topics:
+    - c8y/s/ds/511
   preprocessor:
     type: csv
     fields:
@@ -39,7 +41,8 @@ routes:
       }
 
 - name: download-config-operation
-  topic: c8y/s/ds/524
+  topics:
+    - c8y/s/ds/524
   preprocessor:
     type: csv
     fields:
@@ -57,7 +60,8 @@ routes:
       }
 
 - name: firmware-update-operation
-  topic: c8y/s/ds/515
+  topics:
+    - c8y/s/ds/515
   preprocessor:
     type: csv
     fields:
@@ -76,7 +80,8 @@ routes:
       }
 
 - name: software-update-operation
-  topic: c8y/s/ds/529
+  topics:
+    - c8y/s/ds/529
   preprocessor:
     type: csv
     fields:

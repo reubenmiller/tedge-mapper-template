@@ -196,9 +196,9 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, routeD
 
 	for _, route := range routes {
 		if !route.Skip {
-			slog.Info("Registering route.", "name", route.Name, "topic", route.Topic)
+			slog.Info("Registering route.", "name", route.Name, "topics", route.DisplayTopics())
 			err = app.Register(
-				route.Topic,
+				route.Topics,
 				1,
 				NewStreamFactory(
 					app.Client,
@@ -213,7 +213,7 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, routeD
 				return nil, err
 			}
 		} else {
-			slog.Info("Ignoring route marked as skip.", "name", route.Name, "topic", route.Topic)
+			slog.Info("Ignoring route marked as skip.", "name", route.Name, "topics", route.DisplayTopics())
 		}
 	}
 	return app, nil

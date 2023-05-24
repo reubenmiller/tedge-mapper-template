@@ -13,21 +13,24 @@
                 "skip": {
                     "type": "boolean"
                 },
-                "topic": {
-                    "anyOf": [
-                        {"type": "string"},
-                        {
-                            "type": "string",
-                            "enum": [
-                                "tedge/measurements",
-                                "tedge/measurements/+",
-                                "tedge/events/+",
-                                "tedge/events/+/+",
-                                "tedge/alarms/+",
-                                "tedge/alarms/+/+"
-                            ]
-                        }
-                    ]
+                "topics": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {"type": "string"},
+                            {
+                                "type": "string",
+                                "enum": [
+                                    "tedge/measurements",
+                                    "tedge/measurements/+",
+                                    "tedge/events/+",
+                                    "tedge/events/+/+",
+                                    "tedge/alarms/+",
+                                    "tedge/alarms/+/+"
+                                ]
+                            }
+                        ]
+                    }
                 },
                 "template": {
                     "$ref": "#/definitions/template"
@@ -35,7 +38,8 @@
                 "preprocessor": {
                     "$ref": "#/definitions/preprocessor"
                 }
-            }
+            },
+            "required": ["topics"]
         },
         "preprocessor": {
             "type": "object",
