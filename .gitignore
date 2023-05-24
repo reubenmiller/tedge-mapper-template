@@ -1,3 +1,8 @@
-dist/
+*.deb
+*.apk
+*.rpm
+dist/*
+!dist/.gitkeep
 main
 output/
+.env

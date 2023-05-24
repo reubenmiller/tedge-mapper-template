@@ -1,0 +1,31 @@
+set positional-arguments
+set dotenv-load
+
+# Start the demo
+up:
+    docker compose up -d --build
+
+# Stop the demo
+down:
+    docker compose down -v
+
+# Bootstrap
+bootstrap:
+    docker compose exec tedge env C8Y_BASEURL=${C8Y_BASEURL:-} C8Y_USER=${C8Y_USER:-} C8Y_PASSWORD=${C8Y_PASSWORD:-} DEVICE_ID=${DEVICE_ID:-} bootstrap.sh --install --install-sourcedir /setup/build/
+    docker compose exec child01 bootstrap.sh
+
+# Shell into main device
+shell-main *args='bash':
+    docker compose exec tedge {{args}}
+
+# Shell into child device
+shell-child01 *args='bash':
+    docker compose exec child01 {{args}}
+
+# Show logs of the tedge-mapper-template service
+logs-main-mapper-template:
+    docker compose exec tedge journalctl -fu tedge-mapper-template
+
+# Show logs of the tedge-agent running on the child device
+logs-child01-agent:
+    docker compose exec child01 journalctl -fu tedge-agent
