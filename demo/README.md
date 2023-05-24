@@ -19,6 +19,7 @@
 
     ```sh
     just release-local
+    rm -f demo/dist/tedge-mapper-template*.deb
     cp dist/tedge-mapper-template_*arm64*deb demo/dist/
     ```
 
@@ -31,20 +32,26 @@
     just up
     ```
 
-3. View the logs for the tedge-mapper-template running on the main device
+3. Bootstrap the device
+
+    ```sh
+    just bootstrap
+    ```
+
+4. View the logs for the tedge-mapper-template running on the main device
 
     ```sh
     just logs-main-mapper-template
     ```
 
-4. Open a new console and log the tedge-agent running on the child device
+5. Open a new console and log the tedge-agent running on the child device
 
     ```sh
     cd demo
     just logs-child01-agent
     ```
 
-5. Create a software update operation for the child01 device in Cumulocity
+6. Create a software update operation for the child01 device in Cumulocity
 
     You can use `go-c8y-cli` to create the operation if you don't want to use the UI
 
@@ -60,7 +67,7 @@
 
     If everything works properly you should see the software update operation be handled successfully by the `tedge-agent` and the `tedge-mapper-template` is doing all of the cloud message routing.
 
-6. You can stop the demo by using
+7. You can stop the demo by using
 
     ```sh
     just down
