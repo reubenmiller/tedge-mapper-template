@@ -169,9 +169,9 @@ routes:
               type: type,
               modules: [
                 {
-                  name: software.name,
+                  name: std.get(software, 'name'),
                   version: std.strReplace(software.version, "::" + type, ""),
-                  action: software.action,
+                  action: std.get(software, 'action', 'install'),
                 }
                 for software in message.payload.c8y_SoftwareUpdate
                 if std.get(software, 'softwareType', defaultType) == type
