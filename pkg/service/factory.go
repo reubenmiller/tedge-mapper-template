@@ -72,6 +72,27 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int, post
 			return nil, err
 		}
 
+		// Check if there are any message to be sent before processing the main message
+		for _, m := range sm.Updates {
+			switch m.Message.(type) {
+			case string:
+				slog.Info("Publishing update message.", "topic", m.Topic, "message", m.Message)
+				if client != nil {
+					client.Publish(m.Topic, 0, false, m.Message)
+				}
+			default:
+				preMsg, preErr := json.Marshal(m.Message)
+				if preErr != nil {
+					slog.Warn("Invalid update message.", "error", preErr)
+				} else {
+					slog.Info("Publishing update message.", "topic", m.Topic, "message", string(preMsg))
+					if client != nil {
+						client.Publish(m.Topic, 0, false, preMsg)
+					}
+				}
+			}
+		}
+
 		// Apply depth limit to all messages, and not just a message
 		// which generates a message from the same topic to protect against
 		// infinite loops via multiple routes, e.g.: A -> B -> C -> A (not just A -> A)
@@ -227,6 +248,18 @@ func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, c
 
 	fmt.Fprint(w, "\nInput Message\n")
 	fmt.Fprintf(w, "  %-10v%v\n", "topic:", in.Topic)
+
+	if !out.Skip {
+		// Display and update messages
+		if len(out.Updates) > 0 {
+			fmt.Fprintf(w, "\nOutput Updates\n")
+			for _, update := range out.Updates {
+				fmt.Fprintf(w, "  %-10s%v\n", "topic:", update.Topic)
+				displayJsonMessage(w, update.Message, compact)
+			}
+		}
+	}
+
 	fmt.Fprintf(w, "\nOutput Message\n")
 	fmt.Fprintf(w, "  %-10s%v\n", "topic:", out.Topic)
 	fmt.Fprintf(w, "  %-10s%v\n", "end:", out.End)
@@ -235,22 +268,32 @@ func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, c
 		if out.RawMessage != "" {
 			fmt.Fprintf(w, "%s\n", out.RawMessage)
 		} else {
-			var outB []byte
-			var err error
-			if compact {
-				outB, err = json.Marshal(out.Message)
-			} else {
-				outB, err = json.MarshalIndent(out.Message, "", "  ")
-				if err == nil {
-					outB = pretty.Color(outB, nil)
-				}
-			}
-			if err != nil {
-				fmt.Fprintf(w, "\n%s\n\n", err)
-			} else {
-				fmt.Fprintf(w, "\n%s\n\n", outB)
-			}
+			displayJsonMessage(w, out.Message, compact)
 		}
 	}
 	return out.Skip || out.End
+}
+
+func displayJsonMessage(w io.Writer, value any, compact bool) {
+	var outB []byte
+	var err error
+
+	if strValue, ok := value.(string); ok {
+		fmt.Fprintf(w, "\n%s\n\n", strValue)
+		return
+	}
+
+	if compact {
+		outB, err = json.Marshal(value)
+	} else {
+		outB, err = json.MarshalIndent(value, "", "  ")
+		if err == nil {
+			outB = pretty.Color(outB, nil)
+		}
+	}
+	if err != nil {
+		fmt.Fprintf(w, "\n%s\n\n", err)
+	} else {
+		fmt.Fprintf(w, "\n%s\n\n", outB)
+	}
 }
