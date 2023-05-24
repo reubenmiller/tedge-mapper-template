@@ -4,7 +4,8 @@ disable: true
 routes:
 - name: Cumulocity Operation Mapper Without Preprocessor
   skip: true
-  topic: c8y/s/ds
+  topics:
+    - c8y/s/ds
   template:
     type: jsonnet
     value: |

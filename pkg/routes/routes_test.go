@@ -96,7 +96,7 @@ func Test_RoutePatternMatch(t *testing.T) {
 
 	for _, c := range testcases {
 		route := Route{
-			Topic: c.TopicPattern,
+			Topics: []string{c.TopicPattern},
 		}
 		assert.Equal(t, c.Expected, route.Match(c.Topic))
 	}

@@ -12,8 +12,8 @@ import (
 
 func Test_RemoveContext(t *testing.T) {
 	route := routes.Route{
-		Name:  "Recursive route",
-		Topic: "in",
+		Name:   "Recursive route",
+		Topics: []string{"in"},
 		Template: routes.Template{
 			Type: "jsonnet",
 			Value: `
@@ -71,8 +71,8 @@ func Test_RemoveContext(t *testing.T) {
 
 func Test_MaxDepthLimit(t *testing.T) {
 	recursiveRoute := routes.Route{
-		Name:  "Recursive route",
-		Topic: "in",
+		Name:   "Recursive route",
+		Topics: []string{"in"},
 		Template: routes.Template{
 			Type: "jsonnet",
 			Value: heredoc.Doc(`
@@ -86,8 +86,8 @@ func Test_MaxDepthLimit(t *testing.T) {
 		},
 	}
 	nonRecursiveRoute := routes.Route{
-		Name:  "Non recursive route",
-		Topic: "in",
+		Name:   "Non recursive route",
+		Topics: []string{"in"},
 		Template: routes.Template{
 			Type: "jsonnet",
 			Value: heredoc.Doc(`

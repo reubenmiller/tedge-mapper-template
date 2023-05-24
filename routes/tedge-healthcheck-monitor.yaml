@@ -2,7 +2,8 @@
 ---
 routes:
 - name: monitor 
-  topic: tedge/health/+
+  topics:
+    - tedge/health/+
   description: |
     Create events when a service health changes (or is re-sent)
 
