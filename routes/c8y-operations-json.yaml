@@ -292,8 +292,57 @@ routes:
         std.get(states, s, '400,tedge_custom_mapper,"Unexpected operation state. id=%s, state=%s"' % [id, s])
       ;
 
+      local types = std.set([
+        item.type
+        for item in std.get(message, 'currentSoftwareList', [])
+      ]);
+
+      local packages = [
+        std.map(
+          function(i) i + {type: type},
+          std.filter(function(v) v.type == type, message.currentSoftwareList)[0].modules,
+        )
+        for type in types
+      ];
+
+      local toLegacySoftwareList = function(items)
+        "116," + std.join(
+          ",",
+          std.map(
+            function(item)
+              "%s,%s,%s" % [item.name, item.version, std.get(item, 'url', '')],
+            items,
+          )
+        )
+      ;
+
+      local toAdvancedSoftwareList = function(items)
+        "140," + std.join(
+          ",",
+          std.map(
+            function(item)
+              "%s,%s,%s,%s" % [item.name, item.version, item.type, std.get(item, 'url', '')],
+            items,
+          )
+        )
+      ;
+
+      local formatMessage = function(items, mode='')
+        if mode == 'legacy' then
+          toLegacySoftwareList(items)
+        else
+          toAdvancedSoftwareList(items)
+      ;
+
+      # Control which smart rest template id to use
+      # either legacy or advanced. Defaults to advanced.
+      local c8ySoftwareMode = '';
+
       {
         raw_message: getTemplate(status),
+        [if std.length(packages) > 0 then 'updates']: [
+          {topic: $.topic, message: formatMessage(packages[0], c8ySoftwareMode)},
+        ],
 
         # TODO: replace serial with ctx.serial once the operation schema allow extra fields
         topic: 'c8y/s/us/%s' % serial,
