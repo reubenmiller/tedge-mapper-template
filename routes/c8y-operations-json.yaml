@@ -68,7 +68,7 @@ routes:
         if ctx.serial == device_id || ctx.serial == 'not-set'  then
           'tedge/commands/req/' + partial
         else
-          'tedge/commands/' + ctx.serial + '/req/' + partial
+          'tedge/%/commands/req/' % [ctx.localSerial, partial]
       ;
 
       {
@@ -89,7 +89,7 @@ routes:
         if ctx.serial == device_id || ctx.serial == 'not-set'  then
           'tedge/commands/req/' + partial
         else
-          'tedge/commands/' + ctx.serial + '/req/' + partial
+          'tedge/%/commands/req/%s' % [ctx.localSerial, partial]
       ;
       {
           message: {},
@@ -106,7 +106,7 @@ routes:
         if ctx.serial == device_id || ctx.serial == 'not-set' then
           'tedge/commands/req/' + partial
         else
-          'tedge/' + serial + '/commands/req/' + partial
+          'tedge/%/commands/req/%s' % [ctx.localSerial, partial]
       ;
       local params = std.get(message.payload, 'c8y_UploadConfigFile', {});
       {
@@ -130,7 +130,7 @@ routes:
         if ctx.serial == device_id || ctx.serial == 'not-set'  then
           'tedge/commands/req/' + partial
         else
-          'tedge/commands/' + ctx.serial + '/req/' + partial
+          'tedge/%/commands/req/%s' % [ctx.localSerial, partial]
       ;
       local fragment = std.get(message.payload, 'c8y_DownloadConfigFile', {});
       {
@@ -195,7 +195,7 @@ routes:
         if ctx.serial == device_id || ctx.serial == 'not-set'  then
           'tedge/commands/req/' + partial
         else
-          'tedge/' + ctx.serial + '/commands/req/' + partial
+          'tedge/%/commands/req/%s' % [ctx.localSerial, partial]
       ;
 
       local params = std.get(message.payload, ctx.opType, {});
@@ -264,6 +264,15 @@ routes:
       local status = std.get(message, 'status', 'unknown');
       local reason = std.get(message, 'reason', 'unknown');
 
+      # Check if tedge can be modified to preserve the _ctx property
+      local device_id = std.get(meta, 'device_id', '');
+      local local_serial = std.split(topic, "/")[1];
+      local serial = if std.startsWith(local_serial, device_id) then
+          local_serial
+        else
+          '%s_%s' % [device_id, local_serial]
+        ;
+
       local getTemplate = function(s)
         local states = {
           executing: '501,c8y_SoftwareUpdate',
@@ -275,5 +284,7 @@ routes:
 
       {
         raw_message: getTemplate(status),
-        topic: 'c8y/s/us/%s' % ctx.serial,
+
+        # TODO: replace serial with ctx.serial once the operation schema allow extra fields
+        topic: 'c8y/s/us/%s' % serial,
       }
