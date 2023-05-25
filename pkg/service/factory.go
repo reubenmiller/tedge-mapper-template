@@ -3,6 +3,7 @@ package service
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/fatih/color"
+	"github.com/reubenmiller/go-c8y/pkg/c8y"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/errors"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/jsonnet"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/routes"
@@ -25,7 +27,8 @@ import (
 
 var TedgeBinary = "tedge"
 
-func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int, postDelay time.Duration, opts ...jsonnet.TemplateOption) MessageHandler {
+func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Route, maxDepth int, postDelay time.Duration, opts ...jsonnet.TemplateOption) MessageHandler {
+
 	if maxDepth <= 0 {
 		maxDepth = 3
 	}
@@ -74,6 +77,9 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int, post
 
 		// Check if there are any message to be sent before processing the main message
 		for _, m := range sm.Updates {
+			if m.Skip {
+				continue
+			}
 			switch m.Message.(type) {
 			case string:
 				slog.Info("Publishing update message.", "topic", m.Topic, "message", m.Message)
@@ -123,15 +129,28 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int, post
 		if sm.Skip {
 			slog.Info("skip.", "topic", sm.Topic, "message", string(output))
 		} else {
-			if sm.RawMessage != "" {
-				slog.Info("Publishing new message.", "topic", sm.Topic, "message", sm.RawMessage)
-				if client != nil {
-					client.Publish(sm.Topic, 0, false, sm.RawMessage)
+			// TODO: Switch to using the .MessageString() method
+			if sm.IsMQTTMessage() {
+				if sm.RawMessage != "" {
+					slog.Info("Publishing new message.", "topic", sm.Topic, "message", sm.RawMessage)
+					if client != nil {
+						client.Publish(sm.Topic, 0, false, sm.RawMessage)
+					}
+				} else {
+					slog.Info("Publishing new message.", "topic", sm.Topic, "message", string(output))
+					if client != nil {
+						client.Publish(sm.Topic, 0, false, output)
+					}
 				}
-			} else {
-				slog.Info("Publishing new message.", "topic", sm.Topic, "message", string(output))
-				if client != nil {
-					client.Publish(sm.Topic, 0, false, output)
+			}
+
+			if sm.IsAPIRequest() {
+				if err := sm.API.Validate(); err != nil {
+					slog.Error("Invalid api request.", "error", err)
+					return nil, err
+				}
+				if err := SendAPIRequest(apiClient, sm.API.Host, sm.API.Method, sm.API.Path, sm.MessageString()); err != nil {
+					slog.Error("Failed to send api request.", "error", err)
 				}
 			}
 
@@ -146,6 +165,37 @@ func NewStreamFactory(client mqtt.Client, route routes.Route, maxDepth int, post
 
 		return sm, nil
 	}
+}
+
+func SendAPIRequest(client *APIClient, host, method, path, body string) (err error) {
+	if client == nil {
+		return fmt.Errorf("api client is not set")
+	}
+	r := strings.NewReader(body)
+	opt := c8y.RequestOptions{
+		Host:             host,       // if host is empty, then the default host in the c8y client is used
+		NoAuthentication: host != "", // but don't send the auth token to prevent sending credentials to potentially unsecured service
+		Method:           method,
+		Path:             path,
+		Accept:           "application/json",
+		Body:             r,
+	}
+
+	resp, err := client.SendRequest(context.Background(), opt)
+	if err != nil {
+		return err
+	}
+	slog.Info("Sent request", "response", resp.JSON().Raw)
+	return nil
+}
+
+func GetCumulocityURL() (string, error) {
+	_, err := exec.LookPath(TedgeBinary)
+	if err != nil {
+		return "", err
+	}
+	cmd, err := exec.Command("tedge", "config", "get", "c8y.http").Output()
+	return string(cmd), err
 }
 
 func NewMetaData() map[string]any {
@@ -206,8 +256,8 @@ func NewMetaData() map[string]any {
 	return meta
 }
 
-func NewDefaultService(broker string, clientID string, cleanSession bool, routeDir string, maxdepth int, postDelay time.Duration, debug bool) (*Service, error) {
-	app, err := NewService(broker, clientID, cleanSession)
+func NewDefaultService(broker string, clientID string, cleanSession bool, httpEndpoint string, routeDir string, maxdepth int, postDelay time.Duration, debug bool, dryRun bool) (*Service, error) {
+	app, err := NewService(broker, clientID, cleanSession, httpEndpoint, dryRun)
 	if err != nil {
 		return nil, err
 	}
@@ -223,6 +273,7 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, routeD
 				1,
 				NewStreamFactory(
 					app.Client,
+					app.APIClient,
 					route,
 					maxdepth,
 					postDelay,
@@ -254,15 +305,24 @@ func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, c
 		if len(out.Updates) > 0 {
 			fmt.Fprintf(w, "\nOutput Updates\n")
 			for _, update := range out.Updates {
-				fmt.Fprintf(w, "  %-10s%v\n", "topic:", update.Topic)
-				displayJsonMessage(w, update.Message, compact)
+				if !update.Skip {
+					fmt.Fprintf(w, "  %-10s%v\n", "topic:", update.Topic)
+					displayJsonMessage(w, update.Message, compact)
+				}
 			}
 		}
 	}
 
-	fmt.Fprintf(w, "\nOutput Message\n")
-	fmt.Fprintf(w, "  %-10s%v\n", "topic:", out.Topic)
-	fmt.Fprintf(w, "  %-10s%v\n", "end:", out.End)
+	fmt.Fprintf(w, "\nOutput Message (%s)\n", out.GetType())
+	if out.IsMQTTMessage() {
+		fmt.Fprintf(w, "  %-10s%v\n", "topic:", out.Topic)
+		fmt.Fprintf(w, "  %-10s%v\n", "end:", out.End)
+	}
+
+	if out.IsAPIRequest() {
+		// API message don't chain, so no point printing the 'end' meta info
+		fmt.Fprintf(w, "  %-10s%v %v\n", "request:", out.API.Method, out.API.Path)
+	}
 
 	if !out.Skip {
 		if out.RawMessage != "" {

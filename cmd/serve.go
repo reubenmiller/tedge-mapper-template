@@ -40,7 +40,7 @@ Examples:
 		routeDir, _ := cmd.Root().PersistentFlags().GetString("dir")
 		maxDepth, _ := cmd.Root().PersistentFlags().GetInt("maxdepth")
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, routeDir, maxDepth, ArgDelay, debug)
+		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDir, maxDepth, ArgDelay, debug, false)
 		if err != nil {
 			return err
 		}
