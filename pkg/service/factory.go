@@ -149,7 +149,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 					slog.Error("Invalid api request.", "error", err)
 					return nil, err
 				}
-				if err := SendAPIRequest(apiClient, sm.API.Host, sm.API.Method, sm.API.Path, sm.MessageString()); err != nil {
+				if err := SendAPIRequest(apiClient, sm.API.Host, sm.API.Method, sm.API.Path, sm.Message); err != nil {
 					slog.Error("Failed to send api request.", "error", err)
 				}
 			}
@@ -167,25 +167,25 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 	}
 }
 
-func SendAPIRequest(client *APIClient, host, method, path, body string) (err error) {
+func SendAPIRequest(client *APIClient, host, method, path string, body any) (err error) {
 	if client == nil {
 		return fmt.Errorf("api client is not set")
 	}
-	r := strings.NewReader(body)
+
 	opt := c8y.RequestOptions{
 		Host:             host,       // if host is empty, then the default host in the c8y client is used
 		NoAuthentication: host != "", // but don't send the auth token to prevent sending credentials to potentially unsecured service
 		Method:           method,
 		Path:             path,
 		Accept:           "application/json",
-		Body:             r,
+		Body:             body,
 	}
 
 	resp, err := client.SendRequest(context.Background(), opt)
 	if err != nil {
 		return err
 	}
-	slog.Info("Sent request", "response", resp.JSON().Raw)
+	slog.Info("Sent request.", "response", resp.JSON().Raw)
 	return nil
 }
 

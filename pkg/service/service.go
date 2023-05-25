@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -35,30 +36,79 @@ type APIClient struct {
 	nextTokenRequest time.Time
 }
 
-func NewCumulocityClient(host string, tokenRequestor func() error) *APIClient {
-	if host == "" {
-		host = os.Getenv("C8Y_HOST")
-	}
+type SettingOption func() string
 
-	if host == "" {
-		v, tErr := GetCumulocityURL()
-		if tErr == nil {
-			host = v
-		} else {
-			slog.Info("Tried getting the c8y.http setting from tedge failed.", "error", tErr)
+func WithSettings(opts ...SettingOption) string {
+	for _, opt := range opts {
+		if v := opt(); v != "" {
+			return v
 		}
 	}
+	return ""
+}
+
+// Get an environment variable
+func WithEnvironment(key string) SettingOption {
+	return func() string {
+		return os.Getenv(key)
+	}
+}
+
+// Get an override value
+func WithValue(value string) SettingOption {
+	return func() string {
+		return value
+	}
+}
+
+// Get a configuration value from thin-edge.io using the tedge cli
+func WithTedgeSetting(key string) SettingOption {
+	return func() string {
+		_, err := exec.LookPath(TedgeBinary)
+		if err != nil {
+			slog.Info("Could not find the tedge binary", "error", err)
+			return ""
+		}
+		output, err := exec.Command("tedge", "config", "get", key).Output()
+		if err != nil {
+			slog.Info("Tried getting the c8y.http setting from tedge failed.", "error", err)
+			return ""
+		}
+		return string(bytes.TrimSpace(output))
+	}
+}
+
+func NewCumulocityClient(host string, tokenRequestor func() error) *APIClient {
+	host = WithSettings(
+		WithValue(host),
+		WithEnvironment("C8Y_HOST"),
+		WithTedgeSetting("c8y.http"),
+	)
+	// TODO: go-c8y should handle adding a https:// prefix by default
+	if !strings.Contains(host, "://") {
+		host = "https://" + host
+	}
+	username := WithSettings(
+		WithEnvironment("C8Y_USER"),
+	)
+	tenant := WithSettings(
+		WithEnvironment("C8Y_TENANT"),
+	)
+	password := WithSettings(
+		WithEnvironment("C8Y_PASSWORD"),
+	)
+	token := WithSettings(
+		WithEnvironment("C8Y_TOKEN"),
+	)
 
 	// Support Basic Auth if env variables are set (as this makes it easier to run in non thin-edge.io environments)
-	username := os.Getenv("C8Y_USER")
-	password := os.Getenv("C8Y_PASSWORD")
-	client := c8y.NewClient(nil, host, "", username, password, true)
+	client := c8y.NewClient(nil, host, tenant, username, password, true)
 
 	if password == "" {
 		client.AuthorizationMethod = c8y.AuthMethodOAuth2Internal
 	}
 
-	if token := os.Getenv("C8Y_TOKEN"); token != "" {
+	if token != "" {
 		client.SetToken(token)
 	}
 
@@ -102,17 +152,6 @@ func (c *APIClient) SendRequest(ctx context.Context, options c8y.RequestOptions)
 		}
 	}
 	return resp, err
-}
-
-func c8yTokenUpdater(client *c8y.Client) func(c mqtt.Client, m mqtt.Message) {
-	return func(c mqtt.Client, m mqtt.Message) {
-		if client != nil {
-			if len(m.Payload()) > 0 {
-				slog.Info("Received new c8y token", "len", len(m.Payload()))
-				client.SetToken(string(m.Payload()))
-			}
-		}
-	}
 }
 
 func (s *Service) ReceiveCumulocityToken(value []byte) error {
