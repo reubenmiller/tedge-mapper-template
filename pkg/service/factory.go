@@ -217,6 +217,19 @@ func WithMetaDefaultDeviceID(value string) MetaOption {
 	}
 }
 
+func WithMetaHostname() MetaOption {
+	return func(meta map[string]any) {
+		hostname, err := os.Hostname()
+		if err != nil {
+			slog.Warn("Could not get hostname.", "error", err)
+			// use empty value so that templates don't need to do null checks
+			meta["hostname"] = ""
+		} else {
+			meta["hostname"] = hostname
+		}
+	}
+}
+
 func NewMetaData(defaults ...MetaOption) map[string]any {
 	meta := map[string]any{}
 	meta["env"] = map[string]string{}
@@ -226,11 +239,13 @@ func NewMetaData(defaults ...MetaOption) map[string]any {
 		opt(meta)
 	}
 
+	WithMetaHostname()(meta)
+
 	for _, env := range os.Environ() {
-		// Only include env variables starting with TEDGE_ROUTE
+		// Only include env variables starting with ROUTE_
 		// to limit amount of spam in the templates and to limit
 		// exposing potential secrets to templates
-		if !strings.HasPrefix(env, "TEDGE_ROUTE") {
+		if !strings.HasPrefix(env, "ROUTE_") {
 			continue
 		}
 		key, value, found := strings.Cut(env, "=")
@@ -262,10 +277,10 @@ func NewMetaData(defaults ...MetaOption) map[string]any {
 		// The environment variables will be normalized to mimic the tedge config list
 		// settings.
 		for _, env := range os.Environ() {
-			// Only include env variables starting with TEDGE_ROUTE
+			// Only include env variables starting with TEDGE_
 			// to limit amount of spam in the templates and to limit
 			// exposing potential secrets to templates
-			if !strings.HasPrefix(env, "TEDGE_") && !strings.HasPrefix(env, "TEDGE_ROUTE") {
+			if !strings.HasPrefix(env, "TEDGE_") {
 				continue
 			}
 			key, value, found := strings.Cut(env, "=")
