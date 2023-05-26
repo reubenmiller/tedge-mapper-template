@@ -5,7 +5,10 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"os"
 
+	"github.com/mattn/go-isatty"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/jsonnet"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/service"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/streamer"
@@ -27,6 +30,9 @@ Examples:
 	tedge-mapper-template routes check -t 'c8y/s/ds' -m '524,DeviceSerial,http://www.my.url,type'
 	# Check handling of routes for the 'c8y/s/ds' topic with a given message payload
 
+	tedge-mapper-template routes check -t 'c8y/s/ds' -m ./operation.json
+	# Check handling of routes and read the message from file
+
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		debug, _ := cmd.Root().PersistentFlags().GetBool("debug")
@@ -35,8 +41,32 @@ Examples:
 		message, _ := cmd.Flags().GetString("message")
 		compact, _ := cmd.Flags().GetBool("compact")
 		maxDepth, _ := cmd.Root().PersistentFlags().GetInt("maxdepth")
+		delay, _ := cmd.Root().PersistentFlags().GetDuration("delay")
+		// dryRun, _ := cmd.Root().PersistentFlags().GetBool("dry")
+		// Force dry run
+		dryRun := true
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDir, maxDepth, ArgDelay, debug, true)
+		useColor := true
+		if !isatty.IsTerminal(os.Stdout.Fd()) && !isatty.IsCygwinTerminal(os.Stdout.Fd()) {
+			useColor = false
+		}
+
+		if _, err := os.Stat(message); err == nil {
+			messageFile := message
+			slog.Info("Reading input message from file. path=%", messageFile)
+			file, err := os.Open(messageFile)
+			if err != nil {
+				return err
+			}
+			b, err := io.ReadAll(file)
+			if err != nil {
+				return err
+			}
+
+			message = string(b)
+		}
+
+		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDir, maxDepth, delay, debug, true)
 		if err != nil {
 			return err
 		}
@@ -76,6 +106,7 @@ Examples:
 							handler := service.NewStreamFactory(nil, nil, route, maxDepth, 0,
 								jsonnet.WithMetaData(meta),
 								jsonnet.WithDebug(debug),
+								jsonnet.WithDryRun(dryRun),
 							)
 
 							output, err := handler(msg.Topic, msg.MessageString())
@@ -85,7 +116,7 @@ Examples:
 								return
 							}
 
-							if stop := service.DisplayMessage(fmt.Sprintf("%s (%s)", route.Name, route.DisplayTopics()), &imsg, output, cmd.ErrOrStderr(), compact); stop {
+							if stop := service.DisplayMessage(fmt.Sprintf("%s (%s)", route.Name, route.DisplayTopics()), &imsg, output, cmd.OutOrStdout(), compact, useColor); stop {
 								done <- struct{}{}
 								return
 							}
@@ -111,7 +142,7 @@ func init() {
 	routesCmd.AddCommand(executeCmd)
 
 	executeCmd.Flags().StringP("topic", "t", "", "Topic")
-	executeCmd.Flags().StringP("message", "m", "", "Input message")
+	executeCmd.Flags().StringP("message", "m", "", "Input message. Accepts a string or a path to a file")
 	executeCmd.Flags().StringP("file", "f", "", "Template file")
 	executeCmd.Flags().Bool("compact", false, "Print output message in compact format (not pretty printed)")
 }

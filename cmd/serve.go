@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/reubenmiller/tedge-mapper-template/pkg/service"
 	"github.com/spf13/cobra"
@@ -16,7 +15,6 @@ import (
 
 var ArgBroker string
 var ArgClientID string
-var ArgDelay time.Duration
 var ArgCleanSession bool
 
 // serveCmd represents the serve command
@@ -39,8 +37,10 @@ Examples:
 		debug, _ := cmd.Root().PersistentFlags().GetBool("debug")
 		routeDir, _ := cmd.Root().PersistentFlags().GetString("dir")
 		maxDepth, _ := cmd.Root().PersistentFlags().GetInt("maxdepth")
+		delay, _ := cmd.Root().PersistentFlags().GetDuration("delay")
+		dryRun, _ := cmd.Root().PersistentFlags().GetBool("dry")
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDir, maxDepth, ArgDelay, debug, false)
+		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDir, maxDepth, delay, debug, dryRun)
 		if err != nil {
 			return err
 		}
@@ -64,5 +64,4 @@ func init() {
 	serveCmd.Flags().StringVar(&ArgBroker, "host", "localhost:1883", "Broker endpoint (can included port number)")
 	serveCmd.Flags().BoolVar(&ArgCleanSession, "clean", true, "Clean session")
 	serveCmd.Flags().StringVarP(&ArgClientID, "clientid", "i", "tedge-mapper-template", "MQTT client id")
-	serveCmd.Flags().DurationVar(&ArgDelay, "delay", 2*time.Second, "Delay to wait after publishing a message (to prevent spamming)")
 }

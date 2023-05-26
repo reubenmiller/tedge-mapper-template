@@ -22,8 +22,9 @@ type JsonnetEngine struct {
 }
 
 type EngineOptions struct {
-	Debug bool
-	Meta  any
+	Debug  bool
+	DryRun bool
+	Meta   any
 }
 
 type TemplateOption func(*EngineOptions) *EngineOptions
@@ -31,6 +32,13 @@ type TemplateOption func(*EngineOptions) *EngineOptions
 func WithDebug(v bool) TemplateOption {
 	return func(opt *EngineOptions) *EngineOptions {
 		opt.Debug = v
+		return opt
+	}
+}
+
+func WithDryRun(v bool) TemplateOption {
+	return func(opt *EngineOptions) *EngineOptions {
+		opt.DryRun = v
 		return opt
 	}
 }
@@ -93,6 +101,10 @@ func getParameter(parameters []interface{}, i int) any {
 
 func (e *JsonnetEngine) Debug() bool {
 	return e.Options.Debug
+}
+
+func (e *JsonnetEngine) DryRun() bool {
+	return e.Options.DryRun
 }
 
 func (e *JsonnetEngine) addFunctions() {

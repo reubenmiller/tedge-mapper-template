@@ -9,6 +9,7 @@ require (
 	github.com/google/go-jsonnet v0.20.0
 	github.com/lmittmann/tint v0.3.3
 	github.com/mattn/go-colorable v0.1.13
+	github.com/mattn/go-isatty v0.0.19
 	github.com/reubenmiller/go-c8y v0.14.0
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.3
@@ -27,7 +28,6 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/obeattie/ohmyglob v0.0.0-20150811221449-290764208a0d // indirect
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
