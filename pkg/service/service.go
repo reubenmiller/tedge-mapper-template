@@ -27,6 +27,7 @@ type Service struct {
 	Client        mqtt.Client
 	APIClient     *APIClient
 	Subscriptions map[string]byte
+	Routes        []routes.Route
 }
 
 type APIClient struct {
@@ -195,6 +196,7 @@ func NewService(broker string, clientID string, cleanSession bool, httpEndpoint 
 	service := &Service{
 		Client:        client,
 		Subscriptions: map[string]byte{},
+		Routes:        []routes.Route{},
 	}
 	service.APIClient = NewCumulocityClient(httpEndpoint, RequestCumulocityToken(client))
 
@@ -216,42 +218,59 @@ func isYaml(name string) bool {
 	return strings.HasSuffix(name, ".yaml") || strings.HasSuffix(name, ".yml")
 }
 
-func (s *Service) ScanMappingFiles(dir string) []routes.Route {
-	slog.Info("Scanning for routes.", "path", dir)
-	mappings := make([]routes.Route, 0)
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.Type().IsDir() {
-			return nil
-		}
-		if isYaml(d.Name()) {
-			file, err := os.Open(path)
-			if err != nil {
-				return err
-			}
-			b, err := io.ReadAll(file)
-			if err != nil {
-				return err
-			}
+func (s *Service) GetRoutes() []routes.Route {
+	return s.Routes
+}
 
-			spec := &routes.Specification{}
-			if err := yaml.Unmarshal(b, spec); err != nil {
+func (s *Service) ClearRoutes() {
+	s.Routes = nil
+}
+
+// Scan for routes from a directory. It will automatically add routes to the existing list.
+// Use an explicit call to ClearRoutes if you want to clear existing routes before calling this function.
+// Note: Currently routes are not unregistered from the MQTT client. For this to occur the MQTT client needs
+// to be stopped and destroyed.
+func (s *Service) ScanMappingFiles(dirs []string) []routes.Route {
+	if s.Routes == nil {
+		s.Routes = make([]routes.Route, 0)
+	}
+
+	for _, dir := range dirs {
+		slog.Info("Scanning for routes.", "path", dir)
+		err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
 				return err
 			}
-			if !spec.Disable {
-				mappings = append(mappings, spec.Routes...)
-			} else {
-				slog.Info("Skipping routes as file is marked as disabled.", "file", path)
+			if d.Type().IsDir() {
+				return nil
 			}
+			if isYaml(d.Name()) {
+				file, err := os.Open(path)
+				if err != nil {
+					return err
+				}
+				b, err := io.ReadAll(file)
+				if err != nil {
+					return err
+				}
+
+				spec := &routes.Specification{}
+				if err := yaml.Unmarshal(b, spec); err != nil {
+					return err
+				}
+				if !spec.Disable {
+					s.Routes = append(s.Routes, spec.Routes...)
+				} else {
+					slog.Info("Skipping routes as file is marked as disabled.", "file", path)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			slog.Default().Warn("Error whilst looking for files.", "err", err)
 		}
-		return nil
-	})
-	if err != nil {
-		slog.Default().Warn("Error whilst looking for files.", "err", err)
 	}
-	return mappings
+	return s.Routes
 }
 
 type MessageHandler func(topic string, message_in string) (message_out *streamer.OutputMessage, err error)
