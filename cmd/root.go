@@ -89,4 +89,6 @@ func init() {
 	rootCmd.PersistentFlags().Bool("timestamps", true, "Show date/time in log entries")
 	rootCmd.PersistentFlags().String("dir", "routes", "Route directory")
 	rootCmd.PersistentFlags().Int("maxdepth", 3, "Maximum recursion depth")
+	rootCmd.PersistentFlags().Duration("delay", 2*time.Second, "Delay to wait after publishing a message (by the same route) (to prevent spamming)")
+	rootCmd.PersistentFlags().Bool("dry", false, "Dry run mode. Don't send any requests")
 }

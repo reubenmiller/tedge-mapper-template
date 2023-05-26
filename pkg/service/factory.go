@@ -83,7 +83,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 			switch m.Message.(type) {
 			case string:
 				slog.Info("Publishing update message.", "topic", m.Topic, "message", m.Message)
-				if client != nil {
+				if client != nil && !engine.DryRun() {
 					client.Publish(m.Topic, 0, false, m.Message)
 				}
 			default:
@@ -92,7 +92,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 					slog.Warn("Invalid update message.", "error", preErr)
 				} else {
 					slog.Info("Publishing update message.", "topic", m.Topic, "message", string(preMsg))
-					if client != nil {
+					if client != nil && !engine.DryRun() {
 						client.Publish(m.Topic, 0, false, preMsg)
 					}
 				}
@@ -133,12 +133,12 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 			if sm.IsMQTTMessage() {
 				if sm.RawMessage != "" {
 					slog.Info("Publishing new message.", "topic", sm.Topic, "message", sm.RawMessage)
-					if client != nil {
+					if client != nil && !engine.DryRun() {
 						client.Publish(sm.Topic, 0, false, sm.RawMessage)
 					}
 				} else {
 					slog.Info("Publishing new message.", "topic", sm.Topic, "message", string(output))
-					if client != nil {
+					if client != nil && !engine.DryRun() {
 						client.Publish(sm.Topic, 0, false, output)
 					}
 				}
@@ -149,8 +149,10 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 					slog.Error("Invalid api request.", "error", err)
 					return nil, err
 				}
-				if err := SendAPIRequest(apiClient, sm.API.Host, sm.API.Method, sm.API.Path, sm.Message); err != nil {
-					slog.Error("Failed to send api request.", "error", err)
+				if !engine.DryRun() {
+					if err := SendAPIRequest(apiClient, sm.API.Host, sm.API.Method, sm.API.Path, sm.Message); err != nil {
+						slog.Warn("Failed to send api request.", "error", err)
+					}
 				}
 			}
 
@@ -279,6 +281,7 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, httpEn
 					postDelay,
 					jsonnet.WithMetaData(meta),
 					jsonnet.WithDebug(debug),
+					jsonnet.WithDryRun(dryRun),
 				),
 			)
 			if err != nil {
@@ -291,7 +294,7 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, httpEn
 	return app, nil
 }
 
-func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, compact bool) bool {
+func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, compact bool, useColor bool) bool {
 
 	header := color.New(color.Bold).Add(color.BgCyan)
 	header.Fprintf(w, "Route: %s", name)
@@ -307,7 +310,7 @@ func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, c
 			for _, update := range out.Updates {
 				if !update.Skip {
 					fmt.Fprintf(w, "  %-10s%v\n", "topic:", update.Topic)
-					displayJsonMessage(w, update.Message, compact)
+					displayJsonMessage(w, update.Message, compact, useColor)
 				}
 			}
 		}
@@ -316,7 +319,9 @@ func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, c
 	fmt.Fprintf(w, "\nOutput Message (%s)\n", out.GetType())
 	if out.IsMQTTMessage() {
 		fmt.Fprintf(w, "  %-10s%v\n", "topic:", out.Topic)
-		fmt.Fprintf(w, "  %-10s%v\n", "end:", out.End)
+		if out.End {
+			fmt.Fprintf(w, "  %-10s%v\n", "end:", out.End)
+		}
 	}
 
 	if out.IsAPIRequest() {
@@ -328,13 +333,13 @@ func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, c
 		if out.RawMessage != "" {
 			fmt.Fprintf(w, "%s\n", out.RawMessage)
 		} else {
-			displayJsonMessage(w, out.Message, compact)
+			displayJsonMessage(w, out.Message, compact, useColor)
 		}
 	}
 	return out.Skip || out.End
 }
 
-func displayJsonMessage(w io.Writer, value any, compact bool) {
+func displayJsonMessage(w io.Writer, value any, compact, useColor bool) {
 	var outB []byte
 	var err error
 
@@ -346,14 +351,16 @@ func displayJsonMessage(w io.Writer, value any, compact bool) {
 	if compact {
 		outB, err = json.Marshal(value)
 	} else {
-		outB, err = json.MarshalIndent(value, "", "  ")
+		outB, err = json.MarshalIndent(value, "    ", "  ")
 		if err == nil {
-			outB = pretty.Color(outB, nil)
+			if useColor {
+				outB = pretty.Color(outB, nil)
+			}
 		}
 	}
 	if err != nil {
-		fmt.Fprintf(w, "\n%s\n\n", err)
+		fmt.Fprintf(w, "\n    %s\n\n", err)
 	} else {
-		fmt.Fprintf(w, "\n%s\n\n", outB)
+		fmt.Fprintf(w, "\n    %s\n\n", outB)
 	}
 }
