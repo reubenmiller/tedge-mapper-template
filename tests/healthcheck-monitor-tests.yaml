@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/reubenmiller/commander/feat/handle-nested-files/schema.json
+
+config:
+  env:
+    C8Y_SETTINGS_DEFAULTS_CACHE: true
+
+tests:
+  bridge health up:
+    command: |
+      go run main.go routes check --dir ./cmd --dir ./routes -t tedge/health/custom-bridge -m '1' -s --device-id sim_tedge01
+    stdout:
+      file: tests/messages/main/healthcheck-bridge-up.golden
+
+  bridge health down:
+    command: |
+      go run main.go routes check --dir ./cmd --dir ./routes -t tedge/health/custom-bridge -m '0' -s --device-id sim_tedge01
+    stdout:
+      contains:
+        - 'topic:    c8y/alarm/alarms/create'
+        - '"severity": "MAJOR"'
+        - '"text": "The custom-bridge is down"'
+        - '"type": "tedge_service_down_custom-bridge"'
+
+  service health up:
+    command: |
+      go run main.go routes check --dir ./cmd --dir ./routes -t tedge/health/tedge-agent -m '{"status":"up"}' -s --device-id sim_tedge01
+    stdout:
+      file: tests/messages/main/healthcheck-service-up.golden
+
+  service health down:
+    command: |
+      go run main.go routes check --dir ./cmd --dir ./routes -t tedge/health/tedge-agent -m '{"status":"down"}' -s --device-id sim_tedge01
+    stdout:
+      contains:
+        - 'topic:    c8y/alarm/alarms/create'
+        - '"severity": "MAJOR"'
+        - '"text": "The tedge-agent is down"'
+        - '"type": "tedge_service_down_tedge-agent"'
+
+  mapper health down:
+    command: |
+      go run main.go routes check --dir ./cmd --dir ./routes -t tedge/health/tedge-mapper-c8y -m '{"status":"down"}' -s --device-id sim_tedge01
+    stdout:
+      contains:
+        - 'topic:    c8y/alarm/alarms/create'
+        - '"severity": "CRITICAL"'
+        - '"text": "The tedge-mapper-c8y is down"'
+        - '"type": "tedge_service_down_tedge-mapper-c8y"'

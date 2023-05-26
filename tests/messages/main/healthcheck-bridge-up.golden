@@ -1,0 +1,8 @@
+Route: monitor (tedge/health/+)
+
+Input Message
+  topic:    tedge/health/custom-bridge
+
+Output Message (mqtt)
+  topic:    c8y/s/us
+306,tedge_service_down_custom-bridge
