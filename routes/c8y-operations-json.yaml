@@ -21,6 +21,49 @@ routes:
         }[std.type(any)](any)
       );
 
+      # Ref: https://groups.google.com/g/jsonnet/c/1nEJOYmS78I
+      local m = {
+          get(o, f, default)::
+              local get_(o, ks) =
+                  if ! std.objectHas(o, ks[0]) then
+                      default
+                  else if std.length(ks) == 1 then
+                      o[ks[0]]
+                  else
+                      get_(o[ks[0]], ks[1:]);
+
+              get_(o, std.split(f, '.')),
+          
+        has(o, f)::
+          local has_(o, ks) =
+              if ! std.objectHas(o, ks[0]) then
+                  false
+              else if std.length(ks) == 1 then
+                  true
+              else
+                  has_(o[ks[0]], ks[1:]);
+          has_(o, std.split(f, '.')),
+        
+        trimPrefix(s, prefix)::
+          if s != '' && prefix != '' then
+            if std.startsWith(s, prefix) then
+              s[std.length(prefix):]
+            else
+              s
+          else
+            s
+      };
+
+      local trimPrefix = function(s, prefix)
+        if s != '' && prefix != '' then
+          if std.startsWith(s, prefix) then
+            s[std.length(prefix):]
+          else
+            s
+        else
+          s
+      ;
+
       local detectType = function(m, prefix='', defaultType='unknown')
         {
           local _matches = [
@@ -41,24 +84,26 @@ routes:
             ),
             _ctx: {
               local _ctx = self,
-              local external_childid = _.Get(message, 'deviceExternalIDs.externalIds.0.externalId', null),
-              local external_id = _.Get(message, 'externalSource.externalId', 'not-set'),
               local device_id = std.get(meta, 'device_id', ''),
 
-              serial: if external_childid != null then external_childid else external_id, 
-              localSerial: if std.startsWith(_ctx.serial, device_id) then _ctx.serial[std.length(device_id)+1:] else _ctx.serial,
+              serial: m.get(message, 'externalSource.externalId', ''),
+              localSerial: m.trimPrefix(_ctx.serial, device_id + '_'),
 
               deviceID: std.get(message, 'deviceId', ''),
               agentID: std.get(message, 'agentId', ''),
               operationID: std.get(message, 'id', ''),
               opType: detectType(message, 'c8y_', 'unknown').type,
-              id: _.ID(),
+              id: if _ctx.operationID != "" then _ctx.operationID else _.ID(),
             },
           },
           topic: 'c8y/devicecontrol/notifications/' + $.message._ctx.serial + '/' + $.message._ctx.opType,
+          skip: $.message._ctx.serial == '',
           end: false,
       }
 
+#
+# Shell/Command operation
+#
 - name: shell-operation
   topics:
     - c8y/devicecontrol/notifications/+/c8y_Command
@@ -81,6 +126,9 @@ routes:
           topic: build_topic('operations/command'),
       }
 
+#
+# Restart
+#
 - name: restart-operation
   topics:
     - c8y/devicecontrol/notifications/+/c8y_Restart
@@ -99,6 +147,9 @@ routes:
           topic: build_topic('control/restart'),
       }
 
+#
+# Configuration
+#
 - name: upload-config-operation
   topics:
     - c8y/devicecontrol/notifications/+/c8y_UploadConfigFile
@@ -146,6 +197,9 @@ routes:
           topic: build_topic('config_update'),
       }
 
+#
+# Software
+#
 - name: software-update-operation
   topics:
     - c8y/devicecontrol/notifications/+/c8y_SoftwareUpdate
@@ -187,39 +241,164 @@ routes:
           ]
         },
         topic: build_topic('software/update'),
-        end: true,
         context: false,
       }
-  
+
+#
+# Firmware
+#
 - name: firmware-update-operation
+  description: Incoming Firmware update operation
   topics:
     - c8y/devicecontrol/notifications/+/c8y_Firmware
   template:
     type: jsonnet
     value: |
-      local build_topic = function(partial)
+      local build_tedge_topic = function(partial)
         local device_id = std.get(meta, 'device_id', '');
         if ctx.serial == device_id || ctx.serial == 'not-set'  then
-          'tedge/commands/req/' + partial
+          'tedge/commands/%s' % partial
         else
-          'tedge/%/commands/req/%s' % [ctx.localSerial, partial]
+          'tedge/%s/commands/%s' % [ctx.localSerial, partial]
       ;
 
       local params = std.get(message.payload, ctx.opType, {});
+      assert 'name' in params : ".name is missing: opType=" + ctx.opType;
 
       {
         message: {
-          id: if 'operationID' in ctx then ctx.operationID else ctx.ID,
+          id: if 'operationID' in ctx then ctx.operationID else ctx.id,
           name: params.name,
           url: params.url,
           version: params.version,
           sha256: '',
         },
-        topic: build_topic('firmware_update'),
-        end: true,
+        topic: build_tedge_topic('firmware_update/start'),
         context: false,
       }
 
+- name: firmware-update-operation-done
+  description: Update the firmware list in Cumulocity
+  topics:
+    - tedge/+/commands/firmware_update/done/failed
+    - tedge/+/commands/firmware_update/done/successful
+  template:
+    type: jsonnet
+    value: |
+      local sourceDevice = std.split(topic, '/')[1];
+      local build_smartrest_topic = function(base_topic)
+        local device_id = std.get(meta, 'device_id', '');
+
+        if sourceDevice == device_id || sourceDevice == 'not-set'  then
+          base_topic
+        else
+          '%s/%s' % [base_topic, device_id + '_' + sourceDevice]
+      ;
+
+      {
+        updates: [
+          {
+            local firmwareName = std.get(message, 'name', ''),
+            local firmwareVersion = std.get(message, 'version', ''),
+            local firmwareUrl = std.get(message, 'url', ''),
+
+            topic: build_smartrest_topic('c8y/s/us'),
+            message: "115,%s,%s,%s" % [firmwareName, firmwareVersion, firmwareUrl],
+          }
+        ],
+        topic: 'tedge/+/commands/firmware_update/done',
+        message: message,
+        context: true,
+      }
+
+- name: set-operation-to-executing
+  description: Set any Cumulocity operation to executing
+  topics:
+    - tedge/+/commands/+/executing
+  template:
+    type: jsonnet
+    value: |
+      assert 'id' in message : 'Message must container a .id value';
+      {
+        api: {
+          path: "/devicecontrol/operations/%s" % message.id,
+          method: "PUT",
+        },
+        message: message + {
+          id:: null,
+          startedAt: _.Now(),
+        },
+        context: false,
+      }
+
+- name: set-operation-to-done
+  description: Set any Cumulocity operation to either SUCCESSFUL or FAILED
+  topics:
+    - tedge/+/commands/+/done
+  template:
+    type: jsonnet
+    value: |
+      assert 'id' in message : 'Message must contain an .id property';
+      assert 'status' in message : 'Message must contain an .status property';
+
+      local c8yStatus = std.asciiUpper(message.status);
+
+      {
+        api: {
+          path: "/devicecontrol/operations/%s" % message.id,
+          method: "PUT",
+        },
+        message: message + {
+          id:: null,  # id must be excluded from the update request
+          status: c8yStatus,
+          [if c8yStatus == "FAILED" then 'failureReason']: std.get(message, 'reason', 'no reason given'),
+        },
+        context: false,
+      }
+
+- name: deprecate-c8y-operation-update
+  skip: true
+  description: Generic Cumulocity update operation via REST API
+  topics:
+    - c8y/devicecontrol/notifications/+/c8y
+  template:
+    type: jsonnet
+    value: |
+      # Fail early if the operation is missing required data
+      assert "id" in message : "Message must contain a .id property";
+      assert "status" in message : "Message must contain a .status property";
+
+      # Allowed operation statues
+      local getOperationStatus = function(value)
+        std.get(
+          {
+            successful: "SUCCESSFUL",
+            failed: "FAILED",
+            executing: "EXECUTING",
+            pending: "PENDING",
+          },
+          std.asciiLower(value),
+          'FAILED'
+        )
+      ;
+
+      local status = getOperationStatus(message.status);
+      {
+        api: {
+          path: "/devicecontrol/operations/%s" % message.id,
+          method: "PUT",
+        },
+        message: message + {
+          id:: null,  # id must be excluded from the update request
+          status: status,
+          [if status == "FAILED" then 'failureReason']: std.get(message, 'reason', 'no reason given'),
+        },
+        context: false,
+      }
+
+#
+# Unknown operations
+#
 - name: unknown-operation
   topics:
     - c8y/devicecontrol/notifications/+/unknown
@@ -237,6 +416,10 @@ routes:
 
 #
 # Operation Transitions
+#
+
+#
+# Software
 #
 - name: software update (main device)
   topics:
