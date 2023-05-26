@@ -14,5 +14,15 @@ services:
     networks:
     - tedge
 
+  # To demo child device handling for firmware
+  child02:
+    image: ghcr.io/thin-edge/tedge-demo-child:${VERSION:-latest}
+    pull_policy: always
+    restart: always
+    networks:
+      - tedge
+    environment:
+      - CONNECTOR_DEVICE_ID=child02
+
 networks:
   tedge:
