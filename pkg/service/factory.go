@@ -200,8 +200,32 @@ func GetCumulocityURL() (string, error) {
 	return string(cmd), err
 }
 
-func NewMetaData() map[string]any {
-	envMap := map[string]string{}
+type MetaOption func(m map[string]any)
+
+func WithMetaDefaultValue(key string, value any) MetaOption {
+	return func(meta map[string]any) {
+		keyNormalized := strings.ToLower(strings.ReplaceAll(key, ".", "_"))
+		if keyNormalized != "" {
+			meta[keyNormalized] = value
+		}
+	}
+}
+
+func WithMetaDefaultDeviceID(value string) MetaOption {
+	return func(meta map[string]any) {
+		meta["device_id"] = value
+	}
+}
+
+func NewMetaData(defaults ...MetaOption) map[string]any {
+	meta := map[string]any{}
+	meta["env"] = map[string]string{}
+
+	// Apply any defaults given by the user
+	for _, opt := range defaults {
+		opt(meta)
+	}
+
 	for _, env := range os.Environ() {
 		// Only include env variables starting with TEDGE_ROUTE
 		// to limit amount of spam in the templates and to limit
@@ -211,12 +235,8 @@ func NewMetaData() map[string]any {
 		}
 		key, value, found := strings.Cut(env, "=")
 		if found && value != "" {
-			envMap[key] = value
+			meta["env"].(map[string]string)[key] = value
 		}
-	}
-
-	meta := map[string]any{
-		"env": envMap,
 	}
 
 	// Add tedge config
@@ -258,13 +278,13 @@ func NewMetaData() map[string]any {
 	return meta
 }
 
-func NewDefaultService(broker string, clientID string, cleanSession bool, httpEndpoint string, routeDirs []string, maxdepth int, postDelay time.Duration, debug bool, dryRun bool) (*Service, error) {
+func NewDefaultService(broker string, clientID string, cleanSession bool, httpEndpoint string, routeDirs []string, maxdepth int, postDelay time.Duration, debug bool, dryRun bool, metaOptions []MetaOption) (*Service, error) {
 	app, err := NewService(broker, clientID, cleanSession, httpEndpoint, dryRun)
 	if err != nil {
 		return nil, err
 	}
 
-	meta := NewMetaData()
+	meta := NewMetaData(metaOptions...)
 	routes := app.ScanMappingFiles(routeDirs)
 
 	for _, route := range routes {
