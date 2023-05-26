@@ -82,7 +82,7 @@ To make the template language more useful, additional variables are also injecte
 |----|----|----|
 |`topic`|Topic of the incoming message|`c8y/s/ds/524`|
 |`message`|Payload of incoming message (most of the time this is JSON but it can be CSV|`{}`|
-|`meta`|Additional meta information which can be used within the templates (e.g. access environment variables `meta.env.<ENV_VARIABLE>`)|`{"device_id":"mydevice","env":{"TEDGE_ROUTE_CUSTOM_DATA":"foo/bar"}}`|
+|`meta`|Additional meta information which can be used within the templates (e.g. access environment variables `meta.env.<ENV_VARIABLE>`)|`{"device_id":"mydevice","hostname":"devicename","env":{"ROUTE_CUSTOM_DATA":"foo/bar"}}`, though only env starting with `ROUTE_` will be included!|
 |`ctx`|Internal Routing Context, e.g. how many levels of routes has the message or derivatives of the message|`{"lvl":0}`|
 |`_`|Object providing some additional functions like `_.Now()` to get the current timestamp in RFC3334 format|
 
