@@ -16,7 +16,9 @@ routes:
       local prefix = std.split(topic, "/commands/")[0];
       {
         topic: "%s/commands/req/firmware_update" % prefix,
-        message: message,
+        message: message + {
+          attempt: std.get(message, 'attempt', 0) + 1,
+        },
       }
 
 - name: simulation - firmware plugin - set to done (so it can publish)
