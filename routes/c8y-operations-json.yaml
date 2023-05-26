@@ -285,6 +285,11 @@ routes:
   template:
     type: jsonnet
     value: |
+      local prefix = std.split(topic, "/commands/")[0];
+
+      # TODO: Get the status from the message body
+      local status = std.split(topic, "/done/")[1];
+
       local sourceDevice = std.split(topic, '/')[1];
       local build_smartrest_topic = function(base_topic)
         local device_id = std.get(meta, 'device_id', '');
@@ -306,8 +311,8 @@ routes:
             message: "115,%s,%s,%s" % [firmwareName, firmwareVersion, firmwareUrl],
           }
         ],
-        topic: 'tedge/+/commands/firmware_update/done',
-        message: message,
+        topic: '%s/commands/firmware_update/done' % prefix,
+        message: {status: status} + message,
         context: true,
       }
 
@@ -327,6 +332,7 @@ routes:
         message: message + {
           id:: null,
           startedAt: _.Now(),
+          status: 'EXECUTING',
         },
         context: false,
       }
