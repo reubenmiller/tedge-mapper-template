@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/reubenmiller/commander/feat/handle-nested-files/schema.json
+
+config:
+  env:
+    C8Y_SETTINGS_DEFAULTS_CACHE: true
+
+tests:
+  Processes firmware operations for child devices:
+    command: |
+      go run main.go routes check --dir ./cmd --dir ./routes --dir ./routes-simulation/child -t c8y/devicecontrol/notifications -m tests/messages/child/firmware-update.json -s --device-id sim_tedge01
+    stdout:
+      file: tests/messages/child/firmware-update.golden
+
+  Processes software operations for child devices:
+    command: |
+      go run main.go routes check --dir ./cmd --dir ./routes --dir ./routes-simulation/child -t c8y/devicecontrol/notifications -m tests/messages/child/software-update.json -s --device-id sim_tedge01
+    stdout:
+      file: tests/messages/child/software-update.golden

@@ -1,0 +1,4 @@
+config:
+  inherit-env: true
+  env:
+    TEST_SHELL: bash
