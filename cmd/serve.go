@@ -42,8 +42,11 @@ Examples:
 		maxDepth, _ := cmd.Root().PersistentFlags().GetInt("maxdepth")
 		delay, _ := cmd.Root().PersistentFlags().GetDuration("delay")
 		dryRun, _ := cmd.Root().PersistentFlags().GetBool("dry")
+		deviceID, _ := cmd.Root().PersistentFlags().GetString("device-id")
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDirs, maxDepth, delay, debug, dryRun)
+		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDirs, maxDepth, delay, debug, dryRun, []service.MetaOption{
+			service.WithMetaDefaultDeviceID(deviceID),
+		})
 		if err != nil {
 			return err
 		}

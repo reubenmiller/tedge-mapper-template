@@ -27,8 +27,9 @@ them against a given topic and message.
 
 Examples:
 
-	tedge-mapper-template routes check -t 'c8y/s/ds' -m '524,DeviceSerial,http://www.my.url,type'
-	# Check handling of routes for the 'c8y/s/ds' topic with a given message payload
+	tedge-mapper-template routes check -t 'c8y/s/ds' -m '524,DeviceSerial,http://www.my.url,type' --device-id sim_tedge0
+	# Check handling of routes for the 'c8y/s/ds' topic with a given message payload.
+	# A custom device-id is also provided for testing.
 
 	tedge-mapper-template routes check -t 'c8y/s/ds' -m ./operation.json
 	# Check handling of routes and read the message from file
@@ -42,6 +43,7 @@ Examples:
 		compact, _ := cmd.Flags().GetBool("compact")
 		maxDepth, _ := cmd.Root().PersistentFlags().GetInt("maxdepth")
 		delay, _ := cmd.Root().PersistentFlags().GetDuration("delay")
+		deviceID, _ := cmd.Root().PersistentFlags().GetString("device-id")
 		// dryRun, _ := cmd.Root().PersistentFlags().GetBool("dry")
 		// Force dry run
 		dryRun := true
@@ -66,11 +68,18 @@ Examples:
 			message = string(b)
 		}
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDirs, maxDepth, delay, debug, true)
+		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDirs, maxDepth, delay, debug, true, []service.MetaOption{
+			service.WithMetaDefaultDeviceID(deviceID),
+		})
 		if err != nil {
 			return err
 		}
-		meta := service.NewMetaData()
+
+		// TODO: Provide the meta data as part of the service
+		// and access via app.GetMeta()
+		meta := service.NewMetaData(
+			service.WithMetaDefaultDeviceID(deviceID),
+		)
 
 		slog.Debug("Total routes.", "count", len(app.Routes))
 

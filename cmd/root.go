@@ -91,4 +91,5 @@ func init() {
 	rootCmd.PersistentFlags().Int("maxdepth", 3, "Maximum recursion depth")
 	rootCmd.PersistentFlags().Duration("delay", 2*time.Second, "Delay to wait after publishing a message (by the same route) (to prevent spamming)")
 	rootCmd.PersistentFlags().Bool("dry", false, "Dry run mode. Don't send any requests")
+	rootCmd.PersistentFlags().String("device-id", "", "Default device.id to use if the tedge configuration is not provided")
 }
