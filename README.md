@@ -133,6 +133,42 @@ When the above template is evaluated, the following JSON data is produced. This 
 }
 ```
 
+### Route output format
+
+Each route should output a single object which contains information about how the evaluated template should be processed by the runner.
+
+For example the following show a minimal example of such a route output:
+
+```json
+{
+  "message": {
+    "_ctx": {
+      "lvl": 1
+    },
+    "type": "type",
+    "url": "http://www.my.url"
+  },
+  "topic": "tedge/operations/req/DeviceSerial/download_config"
+}
+```
+
+|Property|Type|Description|
+|---|---|---|
+|`.message`|object|json object containing the payload of either the MQTT or HTTP Request that will be sent by the runner|
+|`.topic`|string|MQTT topic that the `.message` should be sent to. The inclusion of the `.topic` indicates that the message will be sent via MQTT|
+|`.skip`|boolean|If true, the output message will be ignored by the runner and the `.message` will not be sent via MQTT or REST|
+|`.context`|boolean|Indicates if the context property `_ctx` of the `.message` should be included in the outgoing message or not. The `_ctx` is added automatically by the template engine to add message tracing|
+|`.end`|boolean|The outgoing message should not be processed by any other routes. This only works if `.context` is NOT set to `false`|
+|`.api`|object|Object containing information about which HTTP Request should be sent. Inclusion of the `.api` property indicates that a HTTP Request will be sent instead of an MQTT message (see below for the expected properties of the object|
+|`.api.method`|string|HTTP Request Method, e.g. `GET`, `POST`, `PUT`|
+|`.api.path`|string|HTTP Request path, e.g. `devicecontrol/operations/12345`|
+|`.raw_message`|string|String based MQTT payload (e.g. good for c8y SmartREST 2.0 messsages). Note: this could be deprecated in the future once the `.message` can handle both strings and object formats|
+|`.updates[]`|array of objects|Additional MQTT messages that will also be sent, however these are intended for messages that will not be processed by other routes.|
+|`.updates[].topic`|string|MQTT topic for the update message|
+|`.updates[].message`|string|MQTT payload for the update message. Can be a string or an object. It will not contain any reference to the context property|
+|`.updates[].skip`|boolean|The update message will be ignored if this is set to `true`|
+
+
 ## Caveats
 
 * Template based mapping will likely be too slow for high throughput messages (this is a tradeoff for having high configuration)
