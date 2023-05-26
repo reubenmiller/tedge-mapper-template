@@ -1,0 +1,22 @@
+{
+    "agentId": "612000655",
+    "c8y_Firmware": {
+        "name": "iot-linux",
+        "url": "https://example.com",
+        "version": "1.0.0"
+    },
+    "creationTime": "2023-05-25T08:58:19.504Z",
+    "delivery": {
+        "log": [],
+        "status": "PENDING",
+        "time": "2023-05-25T08:58:19.927Z"
+    },
+    "description": "Update firmware to: \"iot-linux\" (version: 1.0.0)",
+    "deviceId": "862000795",
+    "externalSource": {
+        "externalId": "sim_tedge01_child01",
+        "type": "c8y_Serial"
+    },
+    "id": "2021340",
+    "status": "PENDING"
+}
