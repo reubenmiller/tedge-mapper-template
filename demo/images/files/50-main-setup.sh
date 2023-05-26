@@ -10,6 +10,13 @@ CHILD_DIR="/etc/tedge/operations/c8y/${DEVICE_ID}_${CHILD}"
 sudo -u tedge mkdir -p "$CHILD_DIR"
 sudo -u tedge touch "$CHILD_DIR/c8y_SoftwareUpdate"
 
+# TODO: The following are enabled but don't fully work yet
+sudo -u tedge touch "$CHILD_DIR/c8y_Firmware"
+sudo -u tedge touch "$CHILD_DIR/c8y_Restart"
+sudo -u tedge touch "$CHILD_DIR/c8y_DownloadConfigFile"
+sudo -u tedge touch "$CHILD_DIR/c8y_UploadConfigFile"
+sudo -u tedge touch "$CHILD_DIR/c8y_LogfileRequest"
+
 echo "Stopping tedge-mapper-c8y"
 sudo systemctl disable tedge-mapper-c8y
 sudo systemctl stop tedge-mapper-c8y
