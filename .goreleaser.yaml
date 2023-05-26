@@ -127,8 +127,8 @@ nfpms:
         dst: /etc/tedge-mapper-template/routes/
         type: config|noreplace
 
-      - src: routes-simulation/*.yaml
-        dst: /etc/tedge-mapper-template/routes-simulation/
+      - src: routes-simulation/child/*.yaml
+        dst: /etc/tedge-mapper-template/routes-simulation/child/
         type: config|noreplace
 
 # brews:
