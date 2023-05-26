@@ -60,8 +60,11 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 
 		sm, err := stream.Process(topic, message)
 		if err != nil {
-			slog.Error("Template error.", "route", route.Name, "error", err)
-			return nil, err
+			slog.Error("Template error.", "route", route.Name)
+
+			// Print error to stderr directly as sometimes errors are nicely formatted
+			fmt.Fprint(os.Stderr, err.Error())
+			return nil, errors.ErrTemplateException
 		}
 
 		// TODO: Can sm ever by nil, if not then remove useless condition
@@ -293,7 +296,7 @@ func NewMetaData(defaults ...MetaOption) map[string]any {
 	return meta
 }
 
-func NewDefaultService(broker string, clientID string, cleanSession bool, httpEndpoint string, routeDirs []string, maxdepth int, postDelay time.Duration, debug bool, dryRun bool, metaOptions []MetaOption) (*Service, error) {
+func NewDefaultService(broker string, clientID string, cleanSession bool, httpEndpoint string, routeDirs []string, maxdepth int, postDelay time.Duration, debug bool, dryRun bool, metaOptions []MetaOption, libPaths []string, useColor bool) (*Service, error) {
 	app, err := NewService(broker, clientID, cleanSession, httpEndpoint, dryRun)
 	if err != nil {
 		return nil, err
@@ -317,6 +320,8 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, httpEn
 					jsonnet.WithMetaData(meta),
 					jsonnet.WithDebug(debug),
 					jsonnet.WithDryRun(dryRun),
+					// jsonnet.WithLibraryPaths(libPaths...),
+					// jsonnet.WithColorStackTrace(useColor),
 				),
 			)
 			if err != nil {

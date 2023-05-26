@@ -3,10 +3,13 @@ package jsonnet
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	_jsonnet "github.com/google/go-jsonnet"
 	"github.com/google/go-jsonnet/ast"
 	"github.com/teris-io/shortid"
@@ -50,8 +53,33 @@ func WithMetaData(v any) TemplateOption {
 	}
 }
 
+type vmConfig struct {
+	evalJpath []string
+}
+
+func makeVMConfig() vmConfig {
+	return vmConfig{
+		evalJpath: []string{},
+	}
+}
+
 func NewEngine(tmpl string, opts ...TemplateOption) *JsonnetEngine {
 	vm := _jsonnet.MakeVM()
+
+	vm.ErrorFormatter.SetColorFormatter(color.New(color.FgRed).Fprintf)
+
+	vmConfig := makeVMConfig()
+
+	// TODO: Import from a given path, rather than an environment variable
+	jsonnetPath := filepath.SplitList(os.Getenv("JSONNET_PATH"))
+	for i := len(jsonnetPath) - 1; i >= 0; i-- {
+		vmConfig.evalJpath = append(vmConfig.evalJpath, jsonnetPath[i])
+	}
+
+	vm.Importer(&_jsonnet.FileImporter{
+		JPaths: vmConfig.evalJpath,
+	})
+
 	engine := &JsonnetEngine{
 		vm: vm,
 	}
