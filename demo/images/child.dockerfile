@@ -1,4 +1,4 @@
-FROM ghcr.io/thin-edge/tedge-demo-main-systemd:20230517.2
+FROM ghcr.io/thin-edge/tedge-demo-main-systemd:20230526.1
 
 COPY dist/tedge_*.deb /tmp/
 COPY dist/tedge-agent*.deb /tmp/

@@ -272,7 +272,7 @@ routes:
           name: params.name,
           url: params.url,
           version: params.version,
-          sha256: '',
+          sha256: std.get(params, 'sha256', null),
         },
         topic: build_tedge_topic('firmware_update/start'),
         context: false,

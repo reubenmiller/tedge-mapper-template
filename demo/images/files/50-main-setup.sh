@@ -23,3 +23,8 @@ sudo systemctl stop tedge-mapper-c8y
 
 sudo systemctl disable tedge-container-monitor ||:
 sudo systemctl stop tedge-container-monitor ||:
+
+# TODO: Handle the registration of child devices automatically (e.g. intercept the messages sent by the agent and add prefixes)
+# Manually register the child devices for the first time
+tedge mqtt pub 'c8y/s/us' "101,${DEVICE_ID}_child01,child01,c8y_MQTTChildDevice"
+tedge mqtt pub 'c8y/s/us' "101,${DEVICE_ID}_child02,child02,c8y_MQTTChildDevice"
