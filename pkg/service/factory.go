@@ -60,7 +60,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 
 		sm, err := stream.Process(topic, message)
 		if err != nil {
-			slog.Error("Invalid process m.", err)
+			slog.Error("Template error.", "route", route.Name, "error", err)
 			return nil, err
 		}
 
