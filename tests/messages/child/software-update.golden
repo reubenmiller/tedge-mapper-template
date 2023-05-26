@@ -1,0 +1,118 @@
+Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
+
+Input Message
+  topic:    c8y/devicecontrol/notifications
+
+Output Message (mqtt)
+  topic:    c8y/devicecontrol/notifications/sim_tedge01_child01/c8y_SoftwareUpdate
+
+    {
+      "_ctx": {
+        "agentID": "281072059",
+        "deviceID": "211072248",
+        "id": "2029526",
+        "localSerial": "child01",
+        "lvl": 1,
+        "opType": "c8y_SoftwareUpdate",
+        "operationID": "2029526",
+        "serial": "sim_tedge01_child01"
+      },
+      "payload": {
+        "agentId": "281072059",
+        "c8y_SoftwareUpdate": [
+          {
+            "action": "install",
+            "id": "372001201",
+            "name": "dummy1",
+            "softwareType": "dummy",
+            "url": " ",
+            "version": "1.0.0::dummy"
+          }
+        ],
+        "creationTime": "2023-05-25T20:29:04.737Z",
+        "delivery": {
+          "log": [],
+          "status": "PENDING",
+          "time": "2023-05-25T20:29:04.787Z"
+        },
+        "description": "Apply software changes: install \"dummy1\" (version: 1.0.0::dummy)",
+        "deviceId": "211072248",
+        "externalSource": {
+          "externalId": "sim_tedge01_child01",
+          "type": "c8y_Serial"
+        },
+        "id": "2029526",
+        "status": "PENDING"
+      }
+    }
+
+Route: software-update-operation (c8y/devicecontrol/notifications/+/c8y_SoftwareUpdate)
+
+Input Message
+  topic:    c8y/devicecontrol/notifications/sim_tedge01_child01/c8y_SoftwareUpdate
+
+Output Message (mqtt)
+  topic:    tedge/child01/commands/req/software/update
+
+    {
+      "id": "2029526",
+      "updateList": [
+        {
+          "modules": [
+            {
+              "action": "install",
+              "name": "dummy1",
+              "version": "1.0.0"
+            }
+          ],
+          "type": "dummy"
+        }
+      ]
+    }
+
+Route: simulation - software - set to executing (tedge/commands/req/software/update, tedge/+/commands/req/software/update)
+
+Input Message
+  topic:    tedge/child01/commands/req/software/update
+
+Output Message (mqtt)
+  topic:    tedge/child01/commands/res/software/update
+
+    {
+      "currentSoftwareList": [
+        {
+          "modules": [
+            {
+              "name": "curl",
+              "version": "7.74.0-1.3+deb11u7"
+            },
+            {
+              "name": "package2",
+              "version": "2.0.0"
+            }
+          ],
+          "type": "apt"
+        },
+        {
+          "modules": [],
+          "type": "dummy"
+        }
+      ],
+      "id": "2029526",
+      "status": "successful"
+    }
+
+Route: software update (child devices) (tedge/+/commands/res/software/update)
+
+Input Message
+  topic:    tedge/child01/commands/res/software/update
+
+Output Updates
+  topic:    c8y/s/us/sim_tedge01_child01
+
+140,curl,7.74.0-1.3+deb11u7,apt,,package2,2.0.0,apt,
+
+
+Output Message (mqtt)
+  topic:    c8y/s/us/sim_tedge01_child01
+503,c8y_SoftwareUpdate

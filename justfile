@@ -3,6 +3,10 @@
 default:
     @just --list -f "{{justfile()}}"
 
+# Install dev dependencies
+setup-dev:
+    go install github.com/reubenmiller/commander/v3/cmd/commander@v3.0.2
+
 # Run locally
 start *ARGS='':
     go run main.go serve {{ARGS}}
@@ -10,6 +14,10 @@ start *ARGS='':
 # Run tests
 test *ARGS='':
     go test ./... {{ARGS}}
+
+# Test routes
+test-routes *ARGS='': setup-dev
+    commander test --config ./tests/config.yaml {{ARGS}} --dir tests/
 
 # Build for current target
 build *ARGS='':

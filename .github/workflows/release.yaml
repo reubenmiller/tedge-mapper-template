@@ -33,6 +33,9 @@ jobs:
       - name: Test
         run: just test
 
+      - name: Test routes
+        run: just test-routes
+
       - name: Log in to registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
 

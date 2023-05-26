@@ -50,9 +50,10 @@ Output Message (mqtt)
   topic:    tedge/child01/commands/firmware_update/start
 
     {
+      "device": "child01",
       "id": "2021340",
       "name": "iot-linux",
-      "sha256": "",
+      "sha256": null,
       "url": "https://example.com",
       "version": "1.0.0"
     }
@@ -66,9 +67,11 @@ Output Message (mqtt)
   topic:    tedge/child01/commands/req/firmware_update
 
     {
+      "attempt": 1,
+      "device": "child01",
       "id": "2021340",
       "name": "iot-linux",
-      "sha256": "",
+      "sha256": null,
       "url": "https://example.com",
       "version": "1.0.0"
     }
@@ -82,9 +85,11 @@ Output Message (mqtt)
   topic:    tedge/child01/commands/res/firmware_update
 
     {
+      "attempt": 1,
+      "device": "child01",
       "id": "2021340",
       "name": "iot-linux",
-      "sha256": "",
+      "sha256": null,
       "status": "executing",
       "url": "https://example.com",
       "version": "1.0.0"
@@ -99,9 +104,11 @@ Output Message (mqtt)
   topic:    tedge/child01/commands/firmware_update/done/successful
 
     {
+      "attempt": 1,
+      "device": "child01",
       "id": "2021340",
       "name": "iot-linux",
-      "sha256": "",
+      "sha256": null,
       "status": "successful",
       "url": "https://example.com",
       "version": "1.0.0"
@@ -119,12 +126,14 @@ Output Updates
 
 
 Output Message (mqtt)
-  topic:    tedge/+/commands/firmware_update/done
+  topic:    tedge/child01/commands/firmware_update/done
 
     {
+      "attempt": 1,
+      "device": "child01",
       "id": "2021340",
       "name": "iot-linux",
-      "sha256": "",
+      "sha256": null,
       "status": "successful",
       "url": "https://example.com",
       "version": "1.0.0"
@@ -133,16 +142,17 @@ Output Message (mqtt)
 Route: set-operation-to-done (tedge/+/commands/+/done)
 
 Input Message
-  topic:    tedge/+/commands/firmware_update/done
+  topic:    tedge/child01/commands/firmware_update/done
 
 Output Message (api)
   request:  PUT /devicecontrol/operations/2021340
 
     {
+      "attempt": 1,
+      "device": "child01",
       "name": "iot-linux",
-      "sha256": "",
+      "sha256": null,
       "status": "SUCCESSFUL",
       "url": "https://example.com",
       "version": "1.0.0"
     }
-
