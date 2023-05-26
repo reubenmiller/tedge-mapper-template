@@ -36,7 +36,7 @@ Examples:
 		compact, _ := cmd.Flags().GetBool("compact")
 		maxDepth, _ := cmd.Root().PersistentFlags().GetInt("maxdepth")
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, routeDir, maxDepth, ArgDelay, debug)
+		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDir, maxDepth, ArgDelay, debug, true)
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ Examples:
 
 							foundRoute = true
 							// cmd.Printf("Route:\t%s\n", route.Name)
-							handler := service.NewStreamFactory(nil, route, maxDepth, 0,
+							handler := service.NewStreamFactory(nil, nil, route, maxDepth, 0,
 								jsonnet.WithMetaData(meta),
 								jsonnet.WithDebug(debug),
 							)

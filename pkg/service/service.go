@@ -1,13 +1,20 @@
 package service
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/reubenmiller/go-c8y/pkg/c8y"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/routes"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/streamer"
 	"golang.org/x/exp/slog"
@@ -18,23 +25,191 @@ import (
 
 type Service struct {
 	Client        mqtt.Client
+	APIClient     *APIClient
 	Subscriptions map[string]byte
 }
 
-func NewService(broker string, clientID string, cleanSession bool) (*Service, error) {
+type APIClient struct {
+	*c8y.Client
+
+	OnRequestDenied  func() error
+	nextTokenRequest time.Time
+}
+
+type SettingOption func() string
+
+func WithSettings(opts ...SettingOption) string {
+	for _, opt := range opts {
+		if v := opt(); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// Get an environment variable
+func WithEnvironment(key string) SettingOption {
+	return func() string {
+		return os.Getenv(key)
+	}
+}
+
+// Get an override value
+func WithValue(value string) SettingOption {
+	return func() string {
+		return value
+	}
+}
+
+// Get a configuration value from thin-edge.io using the tedge cli
+func WithTedgeSetting(key string) SettingOption {
+	return func() string {
+		_, err := exec.LookPath(TedgeBinary)
+		if err != nil {
+			slog.Info("Could not find the tedge binary", "error", err)
+			return ""
+		}
+		output, err := exec.Command("tedge", "config", "get", key).Output()
+		if err != nil {
+			slog.Info("Tried getting the c8y.http setting from tedge failed.", "error", err)
+			return ""
+		}
+		return string(bytes.TrimSpace(output))
+	}
+}
+
+func NewCumulocityClient(host string, tokenRequestor func() error) *APIClient {
+	host = WithSettings(
+		WithValue(host),
+		WithEnvironment("C8Y_HOST"),
+		WithTedgeSetting("c8y.http"),
+	)
+	// TODO: go-c8y should handle adding a https:// prefix by default
+	if !strings.Contains(host, "://") {
+		host = "https://" + host
+	}
+	username := WithSettings(
+		WithEnvironment("C8Y_USER"),
+	)
+	tenant := WithSettings(
+		WithEnvironment("C8Y_TENANT"),
+	)
+	password := WithSettings(
+		WithEnvironment("C8Y_PASSWORD"),
+	)
+	token := WithSettings(
+		WithEnvironment("C8Y_TOKEN"),
+	)
+
+	// Support Basic Auth if env variables are set (as this makes it easier to run in non thin-edge.io environments)
+	client := c8y.NewClient(nil, host, tenant, username, password, true)
+
+	if password == "" {
+		client.AuthorizationMethod = c8y.AuthMethodOAuth2Internal
+	}
+
+	if token != "" {
+		client.SetToken(token)
+	}
+
+	slog.Info("c8y client.", "host", client.BaseURL, "user", client.Username)
+
+	return &APIClient{
+		Client:          client,
+		OnRequestDenied: tokenRequestor,
+	}
+}
+
+func (c *APIClient) renewToken() {
+	if c.OnRequestDenied != nil {
+		// Limit how often the permission denied response is called
+		now := time.Now()
+		if now.After(c.nextTokenRequest) {
+			if err := c.OnRequestDenied(); err != nil {
+				slog.Error("Could not request.", "err", err)
+			}
+			// TODO: Make minimum interval configurable
+			c.nextTokenRequest = now.Add(60 * time.Second)
+		} else {
+			slog.Info("Permission denied back-off timer has not expired. nextTokenRequestAfter=%s", now.Format(time.RFC3339))
+		}
+	}
+}
+
+func (c *APIClient) SendRequest(ctx context.Context, options c8y.RequestOptions) (*c8y.Response, error) {
+	if c.Token == "" && c.Password == "" {
+		return nil, errors.New("client has no authorization credentials")
+	}
+
+	resp, err := c.Client.SendRequest(ctx, options)
+	if err != nil {
+		return resp, err
+	}
+	if resp != nil {
+		// Only handle HTTP Status Code 401 requests
+		if resp.StatusCode() == http.StatusUnauthorized {
+			c.renewToken()
+		}
+	}
+	return resp, err
+}
+
+func (s *Service) ReceiveCumulocityToken(value []byte) error {
+	slog.Info("Received new c8y token", "len", len(value))
+
+	if s.APIClient != nil {
+		if len(value) > 0 {
+			value = bytes.TrimPrefix(value, []byte("71,"))
+			slog.Info("Setting token to api client")
+			s.APIClient.SetToken(string(value))
+		}
+	}
+	return nil
+}
+
+var ErrNoMQTTClient = errors.New("no mqtt client")
+
+func RequestCumulocityToken(client mqtt.Client) func() error {
+	return func() error {
+		if client == nil {
+			return ErrNoMQTTClient
+		}
+		slog.Info("Requesting new token")
+		client.Publish("c8y/s/uat", 0, false, "")
+		return nil
+	}
+}
+
+func NewService(broker string, clientID string, cleanSession bool, httpEndpoint string, dryRun bool) (*Service, error) {
 	healthTopic := fmt.Sprintf("tedge/health/%s", clientID)
 	opts := mqtt.NewClientOptions().SetClientID(clientID).AddBroker(broker).SetCleanSession(cleanSession).SetWill(healthTopic, `{"status":"down"}`, 1, true)
 	client := mqtt.NewClient(opts)
 
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		return nil, token.Error()
+	if !dryRun {
+		if token := client.Connect(); token.Wait() && token.Error() != nil {
+			return nil, token.Error()
+		}
 	}
-	client.Publish(healthTopic, 1, true, `{"status":"up"}`)
 
-	return &Service{
+	// TODO sub scribe to
+	service := &Service{
 		Client:        client,
 		Subscriptions: map[string]byte{},
-	}, nil
+	}
+	service.APIClient = NewCumulocityClient(httpEndpoint, RequestCumulocityToken(client))
+
+	client.AddRoute("c8y/s/dat", func(c mqtt.Client, m mqtt.Message) {
+		service.ReceiveCumulocityToken(m.Payload())
+	})
+	service.Subscriptions["c8y/s/dat"] = 0
+
+	client.Publish(healthTopic, 1, true, `{"status":"up"}`)
+	go func(c mqtt.Client) {
+		<-time.After(10 * time.Second)
+		service.APIClient.renewToken()
+	}(client)
+
+	return service, nil
 }
 
 func isYaml(name string) bool {

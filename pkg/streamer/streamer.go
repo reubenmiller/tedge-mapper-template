@@ -2,6 +2,8 @@ package streamer
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/reubenmiller/tedge-mapper-template/pkg/template"
 )
@@ -13,6 +15,7 @@ type Streamer struct {
 type SimpleOutputMessage struct {
 	Topic   string `json:"topic"`
 	Message any    `json:"message"`
+	Skip    bool   `json:"skip"`
 }
 
 func (m *SimpleOutputMessage) MessageString() string {
@@ -28,12 +31,33 @@ func (m *SimpleOutputMessage) MessageString() string {
 	}
 }
 
+type RestRequest struct {
+	Host   string `json:"host,omitempty"`
+	Method string `json:"method,omitempty"`
+	Path   string `json:"path,omitempty"`
+}
+
+func (r *RestRequest) Validate() error {
+	if r.Path == "" {
+		return fmt.Errorf("path is empty")
+	}
+	if r.Method == "" {
+		return fmt.Errorf("method is empty")
+	}
+	method := strings.ToUpper(r.Method)
+	if method != "PUT" && method != "POST" && method != "GET" {
+		return fmt.Errorf("method not allowed. only POST, PUT and GET methods are supported. got=%s", r.Method)
+	}
+	return nil
+}
+
 // TODO: Come up with a better name rather the 'Updates' field
 type OutputMessage struct {
 	Topic      string                `json:"topic"`
 	Message    any                   `json:"message,omitempty"`
 	RawMessage string                `json:"raw_message,omitempty"`
 	Updates    []SimpleOutputMessage `json:"updates"`
+	API        *RestRequest          `json:"api,omitempty"`
 	Skip       bool                  `json:"skip"`
 	End        bool                  `json:"end"`
 	Context    *bool                 `json:"context,omitempty"`
@@ -43,6 +67,19 @@ func NewStreamer(engine template.Templater) *Streamer {
 	return &Streamer{
 		Engine: engine,
 	}
+}
+
+func (m *OutputMessage) IsAPIRequest() bool {
+	return m.API != nil
+}
+func (m *OutputMessage) IsMQTTMessage() bool {
+	return m.Topic != ""
+}
+func (m *OutputMessage) GetType() string {
+	if m.IsAPIRequest() {
+		return "api"
+	}
+	return "mqtt"
 }
 
 func (m *OutputMessage) DisableContext() bool {
