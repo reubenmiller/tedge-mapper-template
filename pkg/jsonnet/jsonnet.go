@@ -193,7 +193,7 @@ func (e *JsonnetEngine) Execute(topic, input string) (string, error) {
 
 	sb.WriteString("local message = if std.isObject(_input) then _input + {_ctx:: null} else _input;\n")
 	if inputIsObject {
-		sb.WriteString("local ctx = {lvl:0} + std.get(_input, '_ctx', {});\n")
+		sb.WriteString("local ctx = {lvl:0} + if std.isObject(_input) then std.get(_input, '_ctx', {}) else {};\n")
 	} else {
 		sb.WriteString("local ctx = {lvl:0};\n")
 	}
