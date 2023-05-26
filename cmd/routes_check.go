@@ -36,7 +36,7 @@ Examples:
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		debug, _ := cmd.Root().PersistentFlags().GetBool("debug")
-		routeDir, _ := cmd.Root().PersistentFlags().GetString("dir")
+		routeDirs, _ := cmd.Root().PersistentFlags().GetStringSlice("dir")
 		topic, _ := cmd.Flags().GetString("topic")
 		message, _ := cmd.Flags().GetString("message")
 		compact, _ := cmd.Flags().GetBool("compact")
@@ -66,15 +66,13 @@ Examples:
 			message = string(b)
 		}
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDir, maxDepth, delay, debug, true)
+		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDirs, maxDepth, delay, debug, true)
 		if err != nil {
 			return err
 		}
-
 		meta := service.NewMetaData()
-		routes := app.ScanMappingFiles(routeDir)
 
-		slog.Debug("Total routes.", "count", len(routes))
+		slog.Debug("Total routes.", "count", len(app.Routes))
 
 		queue := make(chan streamer.OutputMessage)
 		done := make(chan struct{})
@@ -94,7 +92,7 @@ Examples:
 			case imsg := <-queue:
 				go func(msg streamer.OutputMessage) {
 					foundRoute := false
-					for _, route := range routes {
+					for _, route := range app.Routes {
 						if !route.Skip {
 							if !route.Match(msg.Topic) {
 								slog.Debug("Route did not match topic.", "route", route.Name, "root_topic", route.DisplayTopics(), "topic", topic)

@@ -258,14 +258,14 @@ func NewMetaData() map[string]any {
 	return meta
 }
 
-func NewDefaultService(broker string, clientID string, cleanSession bool, httpEndpoint string, routeDir string, maxdepth int, postDelay time.Duration, debug bool, dryRun bool) (*Service, error) {
+func NewDefaultService(broker string, clientID string, cleanSession bool, httpEndpoint string, routeDirs []string, maxdepth int, postDelay time.Duration, debug bool, dryRun bool) (*Service, error) {
 	app, err := NewService(broker, clientID, cleanSession, httpEndpoint, dryRun)
 	if err != nil {
 		return nil, err
 	}
 
 	meta := NewMetaData()
-	routes := app.ScanMappingFiles(routeDir)
+	routes := app.ScanMappingFiles(routeDirs)
 
 	for _, route := range routes {
 		if !route.Skip {
@@ -285,7 +285,7 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, httpEn
 				),
 			)
 			if err != nil {
-				return nil, err
+				slog.Warn("Failed to register route. It will be ignored.", "name", route.Name, "error", err)
 			}
 		} else {
 			slog.Info("Ignoring route marked as skip.", "name", route.Name, "topics", route.DisplayTopics())
