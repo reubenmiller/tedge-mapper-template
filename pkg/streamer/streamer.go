@@ -13,9 +13,10 @@ type Streamer struct {
 }
 
 type SimpleOutputMessage struct {
-	Topic   string `json:"topic"`
-	Message any    `json:"message"`
-	Skip    bool   `json:"skip"`
+	Topic   string  `json:"topic"`
+	Message any     `json:"message"`
+	Skip    bool    `json:"skip"`
+	Delay   float32 `json:"delay"`
 }
 
 func (m *SimpleOutputMessage) MessageString() string {
@@ -56,6 +57,7 @@ type OutputMessage struct {
 	Topic      string                `json:"topic"`
 	Message    any                   `json:"message,omitempty"`
 	RawMessage string                `json:"raw_message,omitempty"`
+	Delay      float32               `json:"delay"`
 	Updates    []SimpleOutputMessage `json:"updates"`
 	API        *RestRequest          `json:"api,omitempty"`
 	Skip       bool                  `json:"skip"`
