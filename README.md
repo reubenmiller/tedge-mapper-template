@@ -159,6 +159,7 @@ For example the following show a minimal example of such a route output:
 |`.skip`|boolean|If true, the output message will be ignored by the runner and the `.message` will not be sent via MQTT or REST|
 |`.context`|boolean|Indicates if the context property `_ctx` of the `.message` should be included in the outgoing message or not. The `_ctx` is added automatically by the template engine to add message tracing|
 |`.end`|boolean|The outgoing message should not be processed by any other routes. This only works if `.context` is NOT set to `false`|
+|`.delay`|number|Delay in seconds to wait before publishing the message|
 |`.api`|object|Object containing information about which HTTP Request should be sent. Inclusion of the `.api` property indicates that a HTTP Request will be sent instead of an MQTT message (see below for the expected properties of the object|
 |`.api.method`|string|HTTP Request Method, e.g. `GET`, `POST`, `PUT`|
 |`.api.path`|string|HTTP Request path, e.g. `devicecontrol/operations/12345`|
@@ -166,6 +167,7 @@ For example the following show a minimal example of such a route output:
 |`.updates[]`|array of objects|Additional MQTT messages that will also be sent, however these are intended for messages that will not be processed by other routes.|
 |`.updates[].topic`|string|MQTT topic for the update message|
 |`.updates[].message`|string|MQTT payload for the update message. Can be a string or an object. It will not contain any reference to the context property|
+|`.updates[].delay`|number|Delay in seconds to wait before publishing the message|
 |`.updates[].skip`|boolean|The update message will be ignored if this is set to `true`|
 
 

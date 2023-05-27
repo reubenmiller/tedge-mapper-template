@@ -27,6 +27,29 @@ import (
 
 var TedgeBinary = "tedge"
 
+func optionalDelay(delaySec float32, f func()) {
+	// Don't bother with sub second delays
+	if delaySec > 0.9 {
+		time.AfterFunc(time.Duration(int(delaySec*1000))*time.Millisecond, f)
+	} else {
+		f()
+	}
+}
+
+func WithMQTTPublisher(client mqtt.Client, topic string, message any) func() {
+	return func() {
+		client.Publish(topic, 0, false, message)
+	}
+}
+
+func WithRESTRequest(client *APIClient, host, method, path string, message any) func() {
+	return func() {
+		if err := SendAPIRequest(client, host, method, path, message); err != nil {
+			slog.Warn("Failed to send api request.", "error", err)
+		}
+	}
+}
+
 func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Route, maxDepth int, postDelay time.Duration, opts ...jsonnet.TemplateOption) MessageHandler {
 
 	if maxDepth <= 0 {
@@ -87,7 +110,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 			case string:
 				slog.Info("Publishing update message.", "topic", m.Topic, "message", m.Message)
 				if client != nil && !engine.DryRun() {
-					client.Publish(m.Topic, 0, false, m.Message)
+					optionalDelay(m.Delay, WithMQTTPublisher(client, m.Topic, m.Message))
 				}
 			default:
 				preMsg, preErr := json.Marshal(m.Message)
@@ -96,7 +119,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 				} else {
 					slog.Info("Publishing update message.", "topic", m.Topic, "message", string(preMsg))
 					if client != nil && !engine.DryRun() {
-						client.Publish(m.Topic, 0, false, preMsg)
+						optionalDelay(m.Delay, WithMQTTPublisher(client, m.Topic, preMsg))
 					}
 				}
 			}
@@ -135,14 +158,14 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 			// TODO: Switch to using the .MessageString() method
 			if sm.IsMQTTMessage() {
 				if sm.RawMessage != "" {
-					slog.Info("Publishing new message.", "topic", sm.Topic, "message", sm.RawMessage)
+					slog.Info("Publishing new message.", "topic", sm.Topic, "message", sm.RawMessage, "delay", sm.Delay)
 					if client != nil && !engine.DryRun() {
-						client.Publish(sm.Topic, 0, false, sm.RawMessage)
+						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, sm.RawMessage))
 					}
 				} else {
-					slog.Info("Publishing new message.", "topic", sm.Topic, "message", string(output))
+					slog.Info("Publishing new message.", "topic", sm.Topic, "message", string(output), "delay", sm.Delay)
 					if client != nil && !engine.DryRun() {
-						client.Publish(sm.Topic, 0, false, output)
+						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, output))
 					}
 				}
 			}
@@ -153,9 +176,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 					return nil, err
 				}
 				if !engine.DryRun() {
-					if err := SendAPIRequest(apiClient, sm.API.Host, sm.API.Method, sm.API.Path, sm.Message); err != nil {
-						slog.Warn("Failed to send api request.", "error", err)
-					}
+					optionalDelay(sm.Delay, WithRESTRequest(apiClient, sm.API.Host, sm.API.Method, sm.API.Path, sm.Message))
 				}
 			}
 
@@ -349,7 +370,11 @@ func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, c
 			fmt.Fprintf(w, "\nOutput Updates\n")
 			for _, update := range out.Updates {
 				if !update.Skip {
-					fmt.Fprintf(w, "  %-10s%v\n", "topic:", update.Topic)
+					if update.Delay > 0 {
+						fmt.Fprintf(w, "  %-10s%v (delayed: %.1fs)\n", "topic:", update.Topic, update.Delay)
+					} else {
+						fmt.Fprintf(w, "  %-10s%v\n", "topic:", update.Topic)
+					}
 					displayJsonMessage(w, update.Message, compact, useColor)
 				}
 			}
