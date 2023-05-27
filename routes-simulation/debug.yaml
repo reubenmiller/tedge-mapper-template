@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../spec/schema.json
+---
+routes:
+- name: debug
+  topics:
+    - routes/jsonnet
+  template:
+    type: jsonnet
+    value: |
+      local utils = import 'utils.libsonnet';
+      {
+        message: {
+          trimPrefix: utils.trimPrefix("testme", "test"),
+          meta: meta,
+        }
+      }
