@@ -89,7 +89,7 @@ func init() {
 	rootCmd.PersistentFlags().Bool("timestamps", true, "Show date/time in log entries")
 	rootCmd.PersistentFlags().StringSlice("dir", []string{"routes"}, "Route directory (more than 1 can be provided)")
 	rootCmd.PersistentFlags().StringSlice("libdir", []string{"lib"}, "Library directory (only used by jsonnet)")
-	rootCmd.PersistentFlags().Int("maxdepth", 3, "Maximum recursion depth")
+	rootCmd.PersistentFlags().Int("maxdepth", 10, "Maximum recursion depth")
 	rootCmd.PersistentFlags().Duration("delay", 2*time.Second, "Delay to wait after publishing a message (by the same route) (to prevent spamming)")
 	rootCmd.PersistentFlags().Bool("dry", false, "Dry run mode. Don't send any requests")
 	rootCmd.PersistentFlags().String("device-id", "", "Default device.id to use if the tedge configuration is not provided")
