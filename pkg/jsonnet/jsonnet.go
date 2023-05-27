@@ -3,8 +3,6 @@ package jsonnet
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -14,6 +12,7 @@ import (
 	"github.com/google/go-jsonnet/ast"
 	"github.com/teris-io/shortid"
 	"github.com/tidwall/gjson"
+	"golang.org/x/exp/slog"
 )
 
 var HeaderMarker = "\n###\n"
@@ -25,9 +24,11 @@ type JsonnetEngine struct {
 }
 
 type EngineOptions struct {
-	Debug  bool
-	DryRun bool
-	Meta   any
+	Debug        bool
+	DryRun       bool
+	UseColor     bool
+	LibraryPaths []string
+	Meta         any
 }
 
 type TemplateOption func(*EngineOptions) *EngineOptions
@@ -46,9 +47,23 @@ func WithDryRun(v bool) TemplateOption {
 	}
 }
 
+func WithColorStackTrace(v bool) TemplateOption {
+	return func(opt *EngineOptions) *EngineOptions {
+		opt.UseColor = v
+		return opt
+	}
+}
+
 func WithMetaData(v any) TemplateOption {
 	return func(opt *EngineOptions) *EngineOptions {
 		opt.Meta = v
+		return opt
+	}
+}
+
+func WithLibraryPaths(paths ...string) TemplateOption {
+	return func(opt *EngineOptions) *EngineOptions {
+		opt.LibraryPaths = paths
 		return opt
 	}
 }
@@ -63,31 +78,35 @@ func makeVMConfig() vmConfig {
 	}
 }
 
-func NewEngine(tmpl string, opts ...TemplateOption) *JsonnetEngine {
+func NewJsonnetVM(useColor bool, paths ...string) *_jsonnet.VM {
+
 	vm := _jsonnet.MakeVM()
 
-	vm.ErrorFormatter.SetColorFormatter(color.New(color.FgRed).Fprintf)
+	if useColor {
+		vm.ErrorFormatter.SetColorFormatter(color.New(color.FgRed).Fprintf)
+	}
 
 	vmConfig := makeVMConfig()
-
-	// TODO: Import from a given path, rather than an environment variable
-	jsonnetPath := filepath.SplitList(os.Getenv("JSONNET_PATH"))
-	for i := len(jsonnetPath) - 1; i >= 0; i-- {
-		vmConfig.evalJpath = append(vmConfig.evalJpath, jsonnetPath[i])
+	for i := len(paths) - 1; i >= 0; i-- {
+		slog.Info("Adding jsonnet path.", "path", paths[i])
+		vmConfig.evalJpath = append(vmConfig.evalJpath, paths[i])
 	}
 
 	vm.Importer(&_jsonnet.FileImporter{
 		JPaths: vmConfig.evalJpath,
 	})
 
-	engine := &JsonnetEngine{
-		vm: vm,
-	}
+	return vm
+}
 
+func NewEngine(tmpl string, opts ...TemplateOption) *JsonnetEngine {
+	engine := &JsonnetEngine{}
 	config := &EngineOptions{}
 	for _, opt := range opts {
 		opt(config)
 	}
+
+	engine.vm = NewJsonnetVM(config.UseColor, config.LibraryPaths...)
 
 	sb := strings.Builder{}
 	metaD, err := json.Marshal(config.Meta)

@@ -115,7 +115,8 @@ Examples:
 								jsonnet.WithMetaData(meta),
 								jsonnet.WithDebug(debug),
 								jsonnet.WithDryRun(dryRun),
-								// jsonnet.WithColorStackTrace(useColor),
+								jsonnet.WithLibraryPaths(libPaths...),
+								jsonnet.WithColorStackTrace(useColor),
 							)
 
 							output, err := handler(msg.Topic, msg.MessageString())

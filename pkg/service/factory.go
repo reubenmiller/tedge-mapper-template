@@ -320,8 +320,8 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, httpEn
 					jsonnet.WithMetaData(meta),
 					jsonnet.WithDebug(debug),
 					jsonnet.WithDryRun(dryRun),
-					// jsonnet.WithLibraryPaths(libPaths...),
-					// jsonnet.WithColorStackTrace(useColor),
+					jsonnet.WithLibraryPaths(libPaths...),
+					jsonnet.WithColorStackTrace(useColor),
 				),
 			)
 			if err != nil {
