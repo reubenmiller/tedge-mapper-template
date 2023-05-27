@@ -3,7 +3,7 @@ Description=thin-edge.io experimental template based mapper
 After=mosquitto.service
 
 [Service]
-ExecStart=/usr/bin/tedge-mapper-template --dir /etc/tedge-mapper-template/routes
+ExecStart=/usr/bin/tedge-mapper-template --dir /etc/tedge-mapper-template/routes --libdir /etc/tedge-mapper-template/lib
 User=tedge
 Restart=always
 RestartSec=30
