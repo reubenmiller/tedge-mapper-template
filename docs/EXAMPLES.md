@@ -92,13 +92,13 @@ The fragment in the topic will be used to place the payload like so:
 **Main Device**
 
 ```sh
-tedge mqtt pub tedge/inventory/update/custom '{"os":"Debian 11"}'
+tedge mqtt pub tedge/inventory/update/custom '{"os":"Debian 12"}'
 ```
 
 **Child device**
 
 ```sh
-tedge mqtt pub tedge/child01/inventory/update/custom '{"os":"Debian 11"}'
+tedge mqtt pub tedge/child01/inventory/update/custom '{"os":"Debian 12"}'
 ```
 
 ### Deleting a fragment
