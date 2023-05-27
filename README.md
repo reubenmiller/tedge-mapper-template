@@ -204,7 +204,7 @@ You can create you own libraries by adding them to the `libdir` and then importi
 
 ## Caveats
 
-* Template based mapping will likely be too slow for high throughput messages (this is a tradeoff for having high configuration)
+* Template based mapping will likely be too slow for high throughput messages (this is a tradeoff for being highly configurable)
 * Templates are loaded from a yaml spec which contains jsonnet templates embedded
 
 ## Getting started
