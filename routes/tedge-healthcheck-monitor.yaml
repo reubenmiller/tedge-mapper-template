@@ -13,32 +13,28 @@ routes:
   template:
     type: jsonnet
     value: |
-      local serviceName = std.split(topic, '/')[2];
-      local status =
-        if std.isObject(message) then
-          std.get(message, 'status', 'unknown')
-        else
-          # Map 1 and 0 to up and down
-          std.get({'1':'up','0':'down'}, std.toString(message), 'unknown')
-      ;
+      local c8y = import 'c8y.libsonnet';
 
+      local serviceName = std.split(topic, '/')[2];
+      local status = c8y.service.status(message);
+      
       local alarm = function() std.get({
-          up: {
-            topic: 'c8y/s/us',
-            raw_message: '306,tedge_service_down_%s' % serviceName,
-          },
-          down: {
-            topic: 'c8y/alarm/alarms/create',
-            message: {
-              type: 'tedge_service_down_%s' % serviceName,
-              text: 'The %s is down' % serviceName,
-              severity: if std.startsWith(serviceName, 'tedge-mapper') then 'CRITICAL' else 'MAJOR',
-              time: _.Now()
-            },
-            context: false,
+        up: {
+          topic: 'c8y/s/us',
+          raw_message: '306,tedge_service_down_%s' % serviceName,
+        },
+        down: {
+          topic: 'c8y/alarm/alarms/create',
+          message: {
+            type: 'tedge_service_down_%s' % serviceName,
             text: 'The %s is down' % serviceName,
+            severity: if std.startsWith(serviceName, 'tedge-mapper') then 'CRITICAL' else 'MAJOR',
+            time: _.Now()
           },
-        }, status, {});
+          context: false,
+          text: 'The %s is down' % serviceName,
+        },
+      }, status, {});
 
       local out_message = alarm();
       out_message + { skip: std.length(out_message) == 0 }
