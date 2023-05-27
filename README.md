@@ -169,6 +169,39 @@ For example the following show a minimal example of such a route output:
 |`.updates[].skip`|boolean|The update message will be ignored if this is set to `true`|
 
 
+### Using jsonnet libraries (aka libsonnet)
+
+Jsonnet libraries are a great way to re-use logic between different templates. The libraries can be imported inside the template using the `import '<lib>.libsonnet'` keyword.
+
+The jsonnet engine will only look for imports inside folders provided by the `--libdir <path>` argument. Multiple folders can be provided by using `--libdir <path>` multiple times.
+
+Below shows a simple example using one of the common libraries provided by `tedge-mapper-template`. The `utils.libsonnet` provides a convenience function to remove a fixed prefix from a string.
+
+```jsonnet
+local utils = import 'utils.libsonnet';
+{
+  name: utils.trimPrefix('hello you', 'hello '),
+}
+```
+
+The above jsonnet template will produce the following output:
+
+```json
+{
+  "name": "you",
+}
+```
+
+The package includes a few default libraries which can be imported into any template. The library names are shown in the table below.
+
+|Name|Description|
+|`utils.libsonnet`|Generic utility functions such as `trimPrefix`, `get`, `has` etc.|
+|`tedge.libsonnet`|Tedge functions (e.g. to help you build the MQTT topics)|
+|`c8y.libsonnet`|Cumulocity IoT functions (e.g. convert operation status name, get service name)|
+
+
+You can create you own libraries by adding them to the `libdir` and then importing them inside the template. Check out some of the libs included in this project for some inspiration, e.g. [lib/utils.libsonnet](lib/utils.libsonnet).
+
 ## Caveats
 
 * Template based mapping will likely be too slow for high throughput messages (this is a tradeoff for having high configuration)
