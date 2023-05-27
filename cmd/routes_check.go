@@ -134,7 +134,8 @@ Examples:
 					if err != nil {
 						slog.Error("handler returned an error.", "err", err)
 
-						// Return errors immediately
+						// Return errors immediately (but don't trigger the command's help text)
+						cmd.SilenceUsage = true
 						return err
 					}
 
