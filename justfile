@@ -3,6 +3,18 @@
 default:
     @just --list -f "{{justfile()}}"
 
+# Start the demo with the latest built package
+demo arch='arm64' args='--no-prompt':
+    just release-local
+    rm -f demo/dist/tedge-mapper-template*.deb
+    cp dist/tedge-mapper-template_*{{arch}}*deb demo/dist/
+    cd demo && just up
+    cd demo && just bootstrap {{args}}
+
+# Open a shell on the demo (if running)
+demo-shell:
+    cd demo && just shell-main
+
 # Install dev dependencies
 setup-dev:
     go install github.com/reubenmiller/commander/v3/cmd/commander@v3.0.2
