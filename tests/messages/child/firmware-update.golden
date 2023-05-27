@@ -15,6 +15,7 @@ Output Message (mqtt)
         "lvl": 1,
         "opType": "c8y_Firmware",
         "operationID": "2021340",
+        "parent": "sim_tedge01",
         "serial": "sim_tedge01_child01"
       },
       "payload": {

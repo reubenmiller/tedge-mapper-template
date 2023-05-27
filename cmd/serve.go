@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/mattn/go-isatty"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/service"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slog"
@@ -39,14 +40,20 @@ Examples:
 		slog.Info("Starting listener")
 		debug, _ := cmd.Root().PersistentFlags().GetBool("debug")
 		routeDirs, _ := cmd.Root().PersistentFlags().GetStringSlice("dir")
+		libPaths, _ := cmd.Root().PersistentFlags().GetStringSlice("libdir")
 		maxDepth, _ := cmd.Root().PersistentFlags().GetInt("maxdepth")
 		delay, _ := cmd.Root().PersistentFlags().GetDuration("delay")
 		dryRun, _ := cmd.Root().PersistentFlags().GetBool("dry")
 		deviceID, _ := cmd.Root().PersistentFlags().GetString("device-id")
 
+		useColor := true
+		if !isatty.IsTerminal(os.Stdout.Fd()) && !isatty.IsCygwinTerminal(os.Stdout.Fd()) {
+			useColor = false
+		}
+
 		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDirs, maxDepth, delay, debug, dryRun, []service.MetaOption{
 			service.WithMetaDefaultDeviceID(deviceID),
-		})
+		}, libPaths, useColor)
 		if err != nil {
 			return err
 		}

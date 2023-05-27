@@ -131,6 +131,10 @@ nfpms:
         dst: /etc/tedge-mapper-template/routes-simulation/child/
         type: config|noreplace
 
+      - src: lib/*.libsonnet
+        dst: /etc/tedge-mapper-template/lib/
+        type: config|noreplace
+
 # brews:
 #   -
 #     # Package name

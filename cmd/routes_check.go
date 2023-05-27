@@ -38,6 +38,7 @@ Examples:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		debug, _ := cmd.Root().PersistentFlags().GetBool("debug")
 		routeDirs, _ := cmd.Root().PersistentFlags().GetStringSlice("dir")
+		libPaths, _ := cmd.Root().PersistentFlags().GetStringSlice("libdir")
 		topic, _ := cmd.Flags().GetString("topic")
 		message, _ := cmd.Flags().GetString("message")
 		compact, _ := cmd.Flags().GetBool("compact")
@@ -70,7 +71,7 @@ Examples:
 
 		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDirs, maxDepth, delay, debug, true, []service.MetaOption{
 			service.WithMetaDefaultDeviceID(deviceID),
-		})
+		}, libPaths, useColor)
 		if err != nil {
 			return err
 		}
@@ -114,6 +115,8 @@ Examples:
 								jsonnet.WithMetaData(meta),
 								jsonnet.WithDebug(debug),
 								jsonnet.WithDryRun(dryRun),
+								jsonnet.WithLibraryPaths(libPaths...),
+								jsonnet.WithColorStackTrace(useColor),
 							)
 
 							output, err := handler(msg.Topic, msg.MessageString())

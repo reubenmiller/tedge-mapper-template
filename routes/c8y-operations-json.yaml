@@ -7,77 +7,13 @@ routes:
   template:
     type: jsonnet
     value: |
-      # NB: Recurse the main object, looking for strings to replace
-      local recurseReplace(any, from, to) = (
-        {
-          object: function(x) { [k]: recurseReplace(x[k], from, to) for k in std.objectFields(x) },
-          array: function(x) [recurseReplace(e, from, to) for e in x],
-          string: function(x) _.ReplacePattern(x, from, to),
-          # string: function(x) std.strReplace(x, from, to),
-          number: function(x) x,
-          boolean: function(x) x,
-          'function': function(x) x,
-          'null': function(x) x,
-        }[std.type(any)](any)
-      );
-
-      # Ref: https://groups.google.com/g/jsonnet/c/1nEJOYmS78I
-      local m = {
-          get(o, f, default)::
-              local get_(o, ks) =
-                  if ! std.objectHas(o, ks[0]) then
-                      default
-                  else if std.length(ks) == 1 then
-                      o[ks[0]]
-                  else
-                      get_(o[ks[0]], ks[1:]);
-
-              get_(o, std.split(f, '.')),
-          
-        has(o, f)::
-          local has_(o, ks) =
-              if ! std.objectHas(o, ks[0]) then
-                  false
-              else if std.length(ks) == 1 then
-                  true
-              else
-                  has_(o[ks[0]], ks[1:]);
-          has_(o, std.split(f, '.')),
-        
-        trimPrefix(s, prefix)::
-          if s != '' && prefix != '' then
-            if std.startsWith(s, prefix) then
-              s[std.length(prefix):]
-            else
-              s
-          else
-            s
-      };
-
-      local trimPrefix = function(s, prefix)
-        if s != '' && prefix != '' then
-          if std.startsWith(s, prefix) then
-            s[std.length(prefix):]
-          else
-            s
-        else
-          s
-      ;
-
-      local detectType = function(m, prefix='', defaultType='unknown')
-        {
-          local _matches = [
-            item.key
-            for item in std.objectKeysValues(m)
-            if (std.isObject(item.value) || std.isArray(item.value)) && std.startsWith(item.key, prefix)
-          ],
-          type: if std.length(_matches) > 0 then _matches[0] else defaultType,
-        };
+      local utils = import 'utils.libsonnet';
+      local c8y = import 'c8y.libsonnet';
 
       {
           message: {
             # Replace any internal urls with external ones
-            payload: recurseReplace(
+            payload: utils.recurseReplace(
               message,
               'https?://\\bt\\d+\\.(cumulocity.com|latest.stage.c8y.io)',
               'https://' + std.get(meta, 'c8y_http', std.get(meta.env, 'TEDGE_ROUTE_C8Y_BASEURL', ''))
@@ -86,13 +22,14 @@ routes:
               local _ctx = self,
               local device_id = std.get(meta, 'device_id', ''),
 
-              serial: m.get(message, 'externalSource.externalId', ''),
-              localSerial: m.trimPrefix(_ctx.serial, device_id + '_'),
+              serial: utils.get(message, 'externalSource.externalId', ''),
+              localSerial: utils.trimPrefix(_ctx.serial, device_id + '_'),
+              parent: if _ctx.serial == device_id then "" else device_id,
 
               deviceID: std.get(message, 'deviceId', ''),
               agentID: std.get(message, 'agentId', ''),
               operationID: std.get(message, 'id', ''),
-              opType: detectType(message, 'c8y_', 'unknown').type,
+              opType: c8y.operation.type(message, 'c8y_', 'unknown'),
               id: if _ctx.operationID != "" then _ctx.operationID else _.ID(),
             },
           },
@@ -110,20 +47,14 @@ routes:
   template:
     type: jsonnet
     value: |
-      local build_topic = function(partial)
-        local device_id = std.get(meta, 'device_id', '');
-        if ctx.serial == device_id || ctx.serial == 'not-set'  then
-          'tedge/commands/req/' + partial
-        else
-          'tedge/%/commands/req/' % [ctx.localSerial, partial]
-      ;
-
+      local tedge = import 'tedge.libsonnet';
       {
+          topic: tedge.topicPrefix(ctx.localSerial, ctx.parent) + '/commands/req/operations/command',
           message: {
-            command: message.payload.c8y_Command,
-            _request: message.payload,
+            id: ctx.id,
+            command: message.payload.c8y_Command.text,
           },
-          topic: build_topic('operations/command'),
+          context: false,
       }
 
 #
@@ -135,16 +66,10 @@ routes:
   template:
     type: jsonnet
     value: |
-      local build_topic = function(partial)
-        local device_id = std.get(meta, 'device_id', '');
-        if ctx.serial == device_id || ctx.serial == 'not-set'  then
-          'tedge/commands/req/' + partial
-        else
-          'tedge/%/commands/req/%s' % [ctx.localSerial, partial]
-      ;
+      local tedge = import 'tedge.libsonnet';
       {
-          message: {},
-          topic: build_topic('control/restart'),
+        topic: tedge.topicPrefix(ctx.localSerial, ctx.parent) + '/commands/req/control/restart',
+        message: {},
       }
 
 #
@@ -156,23 +81,18 @@ routes:
   template:
     type: jsonnet
     value: |
-      local build_topic = function(partial)
-        local device_id = std.get(meta, 'device_id', '');
-        if ctx.serial == device_id || ctx.serial == 'not-set' then
-          'tedge/commands/req/' + partial
-        else
-          'tedge/%/commands/req/%s' % [ctx.localSerial, partial]
-      ;
+      local tedge = import 'tedge.libsonnet';
       local params = std.get(message.payload, 'c8y_UploadConfigFile', {});
       {
           local configType = std.get(params, 'type', ''),
+
+          topic: tedge.topicPrefix(ctx.localSerial, ctx.parent) + '/commands/req/config_snapshot',
           message: {
             # Hide id for now
             id:: ctx.id,
             type: configType,
             url: 'http://0.0.0.0:8000/tedge/file-transfer/%s/%s/%s' % [ctx.serial, 'config_snapshot', configType],
           },
-          topic: build_topic('config_snapshot'),
       }
 
 - name: download-config-operation
@@ -181,20 +101,14 @@ routes:
   template:
     type: jsonnet
     value: |
-      local build_topic = function(partial)
-        local device_id = std.get(meta, 'device_id', '');
-        if ctx.serial == device_id || ctx.serial == 'not-set'  then
-          'tedge/commands/req/' + partial
-        else
-          'tedge/%/commands/req/%s' % [ctx.localSerial, partial]
-      ;
+      local tedge = import 'tedge.libsonnet';
       local fragment = std.get(message.payload, 'c8y_DownloadConfigFile', {});
       {
-          message: {
-            type: std.get(fragment, 'type', ''),
-            url: std.get(fragment, 'url', ''),
-          },
-          topic: build_topic('config_update'),
+        topic: tedge.topicPrefix(ctx.localSerial, ctx.parent) + '/commands/req/config_update',
+        message: {
+          type: std.get(fragment, 'type', ''),
+          url: std.get(fragment, 'url', ''),
+        },
       }
 
 #
@@ -206,13 +120,7 @@ routes:
   template:
     type: jsonnet
     value: |
-      local build_topic = function(partial)
-        local device_id = std.get(meta, 'device_id', '');
-        if ctx.serial == device_id || ctx.serial == 'not-set'  then
-          'tedge/commands/req/' + partial
-        else
-          'tedge/%s/commands/req/%s' %[ctx.localSerial, partial]
-      ;
+      local tedge = import 'tedge.libsonnet';
 
       local defaultType = std.get(meta, 'software_plugin_default', 'apt');
 
@@ -222,6 +130,8 @@ routes:
       ]);
 
       {
+        topic: tedge.topicPrefix(ctx.localSerial, ctx.parent) + '/commands/req/software/update',
+        context: false,
         message: {
           id: ctx.id,
           updateList: [
@@ -240,8 +150,6 @@ routes:
             for type in types
           ]
         },
-        topic: build_topic('software/update'),
-        context: false,
       }
 
 #
@@ -254,18 +162,13 @@ routes:
   template:
     type: jsonnet
     value: |
-      local build_tedge_topic = function(partial)
-        local device_id = std.get(meta, 'device_id', '');
-        if ctx.serial == device_id || ctx.serial == 'not-set'  then
-          'tedge/commands/%s' % partial
-        else
-          'tedge/%s/commands/%s' % [ctx.localSerial, partial]
-      ;
-
+      local tedge = import 'tedge.libsonnet';
       local params = std.get(message.payload, ctx.opType, {});
       assert 'name' in params : ".name is missing: opType=" + ctx.opType;
 
       {
+        topic: tedge.topicPrefix(ctx.localSerial, ctx.parent) + '/commands/firmware_update/start',
+        context: false,
         message: {
           id: if 'operationID' in ctx then ctx.operationID else ctx.id,
           device: ctx.localSerial,
@@ -274,8 +177,6 @@ routes:
           version: params.version,
           sha256: std.get(params, 'sha256', null),
         },
-        topic: build_tedge_topic('firmware_update/start'),
-        context: false,
       }
 
 - name: firmware-update-operation-done
@@ -375,21 +276,9 @@ routes:
       assert "id" in message : "Message must contain a .id property";
       assert "status" in message : "Message must contain a .status property";
 
-      # Allowed operation statues
-      local getOperationStatus = function(value)
-        std.get(
-          {
-            successful: "SUCCESSFUL",
-            failed: "FAILED",
-            executing: "EXECUTING",
-            pending: "PENDING",
-          },
-          std.asciiLower(value),
-          'FAILED'
-        )
-      ;
+      local c8y = import 'c8y.libsonnet';
 
-      local status = getOperationStatus(message.status);
+      local status = c8y.operation.status(message.status);
       {
         api: {
           path: "/devicecontrol/operations/%s" % message.id,
@@ -413,11 +302,11 @@ routes:
     type: jsonnet
     value: |
       {
-          message: {
-            text: 'Unknown operation type. Check the _request fragment to inspect the original message',
-            _request: message.payload,
-          },
-          topic: 'tedge/events/unknown_operation',
+        topic: 'tedge/events/unknown_operation',
+        message: {
+          text: 'Unknown operation type. Check the _request fragment to inspect the original message',
+          _request: message.payload,
+        },
       }
 
 
@@ -449,8 +338,8 @@ routes:
       ;
 
       {
-        raw_message: getTemplate(status),
         topic: 'c8y/s/us',
+        raw_message: getTemplate(status),
       }
 
 - name: software update (child devices)
@@ -529,11 +418,11 @@ routes:
       local c8ySoftwareMode = '';
 
       {
+        # TODO: replace serial with ctx.serial once the operation schema allow extra fields
+        topic: 'c8y/s/us/%s' % serial,
+
         raw_message: getTemplate(status),
         [if std.length(packages) > 0 then 'updates']: [
           {topic: $.topic, message: formatMessage(packages[0], c8ySoftwareMode)},
         ],
-
-        # TODO: replace serial with ctx.serial once the operation schema allow extra fields
-        topic: 'c8y/s/us/%s' % serial,
       }

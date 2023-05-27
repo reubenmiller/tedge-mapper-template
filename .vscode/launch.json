@@ -11,6 +11,7 @@
             "mode": "auto",
             "envFile": "${workspaceFolder}/.env",
             "program": "${workspaceFolder}/main.go",
+            "cwd": "${workspaceFolder}",
             "args": [
                 "routes",
                 "check",
