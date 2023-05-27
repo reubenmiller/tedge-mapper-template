@@ -4,6 +4,7 @@ Copyright © 2023 thin-edge thinedge@thin-edge.io
 package cmd
 
 import (
+	"container/list"
 	"fmt"
 	"io"
 	"os"
@@ -84,65 +85,75 @@ Examples:
 
 		slog.Debug("Total routes.", "count", len(app.Routes))
 
-		queue := make(chan streamer.OutputMessage)
-		done := make(chan struct{})
-
+		queue := list.New()
 		addMessage := func(topic string, message string) {
-			queue <- streamer.OutputMessage{
-				Topic:   topic,
-				Message: message,
-			}
+			queue.PushBack(
+				streamer.OutputMessage{
+					Topic:   topic,
+					Message: message,
+				},
+			)
 		}
 
-		go addMessage(topic, message)
+		// Seed first message
+		addMessage(topic, message)
 
-	loop:
+		iteration := 0
+
 		for {
-			select {
-			case imsg := <-queue:
-				go func(msg streamer.OutputMessage) {
-					foundRoute := false
-					for _, route := range app.Routes {
-						if !route.Skip {
-							if !route.Match(msg.Topic) {
-								slog.Debug("Route did not match topic.", "route", route.Name, "root_topic", route.DisplayTopics(), "topic", topic)
-								continue
-							}
-
-							foundRoute = true
-							// cmd.Printf("Route:\t%s\n", route.Name)
-							handler := service.NewStreamFactory(nil, nil, route, maxDepth, 0,
-								jsonnet.WithMetaData(meta),
-								jsonnet.WithDebug(debug),
-								jsonnet.WithDryRun(dryRun),
-								jsonnet.WithLibraryPaths(libPaths...),
-								jsonnet.WithColorStackTrace(useColor),
-							)
-
-							output, err := handler(msg.Topic, msg.MessageString())
-							if err != nil {
-								slog.Error("handler returned an error.", "err", err)
-								done <- struct{}{}
-								return
-							}
-
-							if stop := service.DisplayMessage(fmt.Sprintf("%s (%s)", route.Name, route.DisplayTopics()), &imsg, output, cmd.OutOrStdout(), compact, useColor); stop {
-								done <- struct{}{}
-								return
-							}
-							slog.Info("Queuing new message")
-							go addMessage(output.Topic, output.MessageString())
-						}
-					}
-					if !foundRoute {
-						slog.Info("No matching routes found. Stopping")
-						done <- struct{}{}
-					}
-				}(imsg)
-
-			case <-done:
-				break loop
+			item := queue.Front()
+			if item == nil {
+				slog.Info("No more messages to process")
+				break
 			}
+			if iteration > maxDepth {
+				return fmt.Errorf("max iterations reached. max-depth=%d", maxDepth)
+			}
+			msg := item.Value.(streamer.OutputMessage)
+
+			slog.Info("Checking for matching routes.", "iteration", iteration)
+			foundRoute := false
+			for _, route := range app.Routes {
+				if !route.Skip {
+					if !route.Match(msg.Topic) {
+						slog.Debug("Route did not match topic.", "route", route.Name, "root_topic", route.DisplayTopics(), "topic", topic)
+						continue
+					}
+
+					foundRoute = true
+					// cmd.Printf("Route:\t%s\n", route.Name)
+					handler := service.NewStreamFactory(nil, nil, route, maxDepth, 0,
+						jsonnet.WithMetaData(meta),
+						jsonnet.WithDebug(debug),
+						jsonnet.WithDryRun(dryRun),
+						jsonnet.WithLibraryPaths(libPaths...),
+						jsonnet.WithColorStackTrace(useColor),
+					)
+
+					output, err := handler(msg.Topic, msg.MessageString())
+					if err != nil {
+						slog.Error("handler returned an error.", "err", err)
+
+						// Return errors immediately
+						return err
+					}
+
+					stop := service.DisplayMessage(fmt.Sprintf("%s (%s)", route.Name, route.DisplayTopics()), &msg, output, cmd.OutOrStdout(), compact, useColor)
+					if stop {
+						continue
+					}
+
+					// Queue new message
+					slog.Info("Queuing new message")
+					addMessage(output.Topic, output.MessageString())
+				}
+			}
+			if !foundRoute {
+				slog.Info("No matching routes found")
+			}
+			queue.Remove(item)
+			slog.Info("Queue.", "size", queue.Len())
+			iteration++
 		}
 		return nil
 	},
