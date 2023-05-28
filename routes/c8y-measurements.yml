@@ -58,7 +58,7 @@ routes:
 
       local type = std.splitLimitR(topic, '/', 2)[1];
       local group = std.splitLimitR(topic, '/', 2)[2];
-      local measurements = tedge.measurements.from_simple_obj(group, message, units);
+      local measurements = tedge.measurements.from_simple_obj(group, message, units, function(k) std.join('.', [group, k]));
 
       {
         topic: 'c8y/measurement/measurements/create',

@@ -138,11 +138,11 @@
                 {value: o, unit: std.get(units, key, '')}
         ,
 
-        from_simple_obj(group, obj, units={})::
-            local _numeric = _f.filter_numeric(obj);
+        from_simple_obj(group, obj, units={}, keyFunc=function(k) k)::
+            local _numeric = _f.filter_numeric(obj, units, keyFunc=keyFunc);
             {
                 [group]: {
-                    [item.key]: _f.to_meas_value(item.value, std.join('.', [group, item.key]), units),
+                    [item.key]: _f.to_meas_value(item.value),
                     for item in std.objectKeysValues(_numeric)
                 }
             }
@@ -184,10 +184,10 @@
         ,
 
         # Return a new object with only the properties with numeric values (root level only)
-        filter_numeric(obj, units={})::
+        filter_numeric(obj, units={}, keyFunc=function(k) k)::
             if std.isObject(obj) then
                 {
-                    [item.key]: {value: item.value, unit: std.get(units, item.key, '')}
+                    [item.key]: {value: item.value, unit: std.get(units, keyFunc(item.key), '')}
                     for item in std.objectKeysValues(obj)
                     if std.isNumber(item.value)
                 }

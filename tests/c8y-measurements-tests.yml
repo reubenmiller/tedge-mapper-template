@@ -29,11 +29,11 @@ tests:
             {
               "environment": {
                 "humidity": {
-                  "unit": "",
+                  "unit": "%",
                   "value": 10
                 },
                 "temperature": {
-                  "unit": "",
+                  "unit": "˚C",
                   "value": 20
                 }
               },
