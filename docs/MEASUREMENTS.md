@@ -207,11 +207,11 @@ environment.humidity,90,%
 {
   "environment": {
     "humidity": {
-      "units": "%",
+      "unit": "%",
       "value": "90"
     },
     "temperature": {
-      "units": "˚C",
+      "unit": "˚C",
       "value": "10.0"
     }
   },

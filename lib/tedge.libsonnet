@@ -81,7 +81,7 @@
                 [key_parts[0]]+: {
                     [key_parts[1]]+: {
                     value: parts[1],
-                    units: parts[2],
+                    unit: parts[2],
                     }
                 },
             }
@@ -127,22 +127,22 @@
             }
         ,
 
-        to_meas_value(o)::
+        to_meas_value(o, key='', units={})::
             if std.isObject(o) then
                 assert 'value' in o : 'If an measurement provides an object value, then it must contain a .value property!';
                 {
                     value: std.get(o, 'value'),
-                    unit: std.get(o, 'unit', ''),
+                    unit: std.get(o, 'unit', std.get(units, key, '')),
                 }
             else
-                {value: o, unit: ''}
+                {value: o, unit: std.get(units, key, '')}
         ,
 
-        from_simple_obj(group, obj)::
+        from_simple_obj(group, obj, units={})::
             local _numeric = _f.filter_numeric(obj);
             {
                 [group]: {
-                    [item.key]: _f.to_meas_value(item.value),
+                    [item.key]: _f.to_meas_value(item.value, std.join('.', [group, item.key]), units),
                     for item in std.objectKeysValues(_numeric)
                 }
             }
@@ -169,10 +169,13 @@
                     ;
                     out + _f._to_nested(
                         std.map(keyFunc, pathArr),
-                        {
-                            value: item.value,
-                            unit: '',
-                        }
+                        if std.isObject(item.value) then
+                            item.value
+                        else
+                            {
+                                value: item.value,
+                                unit: '',
+                            }
                     )
                 ,
                 std.objectKeysValues(obj),
@@ -181,10 +184,10 @@
         ,
 
         # Return a new object with only the properties with numeric values (root level only)
-        filter_numeric(obj)::
+        filter_numeric(obj, units={})::
             if std.isObject(obj) then
                 {
-                    [item.key]: item.value
+                    [item.key]: {value: item.value, unit: std.get(units, item.key, '')}
                     for item in std.objectKeysValues(obj)
                     if std.isNumber(item.value)
                 }
