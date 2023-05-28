@@ -69,20 +69,19 @@
     measurements:: {
         local _f = self,
         to_value(x):: 
-            local key_value = _self.__padArray(std.splitLimit(x, '=', 1), 2);
-            local value_unit = _self.__padArray(std.splitLimit(key_value[1], ' ', 1), 2);
+            local parts = _self.__padArray(std.splitLimit(x, ',', 2), 3);
             local key_parts = 
-            local p = std.split(key_value[0], '.');
-            if std.length(p) == 1 then
-                [p[0], p[0]]
-            else
-                [p[0], p[1]]
+                local p = std.split(parts[0], '.');
+                if std.length(p) == 1 then
+                    [p[0], p[0]]
+                else
+                    [p[0], p[1]]
             ;
             {
                 [key_parts[0]]+: {
                     [key_parts[1]]+: {
-                    value: value_unit[0],
-                    units: value_unit[1],
+                    value: parts[1],
+                    units: parts[2],
                     }
                 },
             }

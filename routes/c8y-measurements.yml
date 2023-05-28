@@ -24,9 +24,9 @@ routes:
       local meta =
         {time: _.Now()}
         + {
-            ['time']: std.splitLimit(line, '=', 1)[1]
+            ['time']: std.splitLimit(line, ',', 1)[1]
             for line in std.split(message, '\n')
-            if std.startsWith(line, 'time=')
+            if std.startsWith(line, 'time,')
           }
       ;
 

@@ -173,7 +173,7 @@ tests:
       go run main.go routes check \
         --dir ./routes \
         -t tedge/measurements-bulk-text/mytype \
-        -m "time=12345\nenvironment.temperature=10.0 ˚C\nenvironment.humidity=90 %" \
+        -m "time,12345\nenvironment.temperature,10.0,˚C\nenvironment.humidity,90,%" \
         -s \
         --device-id sim_tedge01
     stdout:
