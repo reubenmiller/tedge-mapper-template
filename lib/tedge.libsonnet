@@ -1,4 +1,6 @@
 {
+    local _self = self,
+
     # Get the topic prefix, e.g. tedge or tedge/child01
     # depending if the device has a parent or not
     topicPrefix(serial, parent='', prefix='tedge')::
@@ -54,4 +56,164 @@
     getExternalId(items=[], sep='_')::
         std.join(sep, items)
     ,
+
+    __padArray(arr, n, default=''):: [
+        local len = std.length(arr);
+        if i < len then
+            arr[i]
+        else
+            default
+        for i in std.range(0,n)
+    ],
+
+    measurements:: {
+        local _f = self,
+        to_value(x):: 
+            local parts = _self.__padArray(std.splitLimit(x, ',', 2), 3);
+            local key_parts = 
+                local p = std.split(parts[0], '.');
+                if std.length(p) == 1 then
+                    [p[0], p[0]]
+                else
+                    [p[0], p[1]]
+            ;
+            {
+                [key_parts[0]]+: {
+                    [key_parts[1]]+: {
+                    value: parts[1],
+                    units: parts[2],
+                    }
+                },
+            }
+        ,
+        
+        from_text(m, sep='\n', init={})::
+            std.foldl(
+                function(a, b) a + b,
+                std.map(_f.to_value, std.split(m, sep)),
+                init,
+            )
+        ,
+
+
+        is_digit(c)::
+            (c > 47 && c < 58) # 0-9
+            || c == 46 # .
+            || c == 45 # -
+            || c == 43 # +
+            || c == 69 # E (for exponential values)
+        ,
+        
+        strip_non_numeric(c)::
+            if _f.is_digit(c) then
+                std.char(c)
+            else
+                ''
+        ,
+        
+        strip_numeric(c)::
+            if _f.is_digit(c) then
+                ''
+            else
+                std.char(c)
+        ,
+        
+        from_str_value(s)::
+            {
+                value: std.parseJson(
+                    std.join('', std.map(_f.strip_non_numeric, std.map(std.codepoint, std.stringChars(s))))
+                ),
+                unit: std.stripChars(std.join('', std.map(_f.strip_numeric, std.map(std.codepoint, std.stringChars(s)))), ' ')
+            }
+        ,
+
+        to_meas_value(o)::
+            if std.isObject(o) then
+                assert 'value' in o : 'If an measurement provides an object value, then it must contain a .value property!';
+                {
+                    value: std.get(o, 'value'),
+                    unit: std.get(o, 'unit', ''),
+                }
+            else
+                {value: o, unit: ''}
+        ,
+
+        from_simple_obj(group, obj)::
+            local _numeric = _f.filter_numeric(obj);
+            {
+                [group]: {
+                    [item.key]: _f.to_meas_value(item.value),
+                    for item in std.objectKeysValues(_numeric)
+                }
+            }
+        ,
+
+        # build a nested object from a dot notation key to a tested json structure
+        # Example:
+        #  from_dot(['foo', 'bar'], 1) => {foo:{bar: 1}}
+        _to_nested(pathArr, value)::
+            std.foldr(function(a, b) {} + {[a]+: b}, pathArr, value)
+        ,
+
+        unflatten(obj, init={}, sep='.', limit=1, keyFunc=function(x) std.strReplace(x, '.', '::'))::
+            std.foldl(
+                function(out, item)
+                    local _tmp = std.splitLimit(item.key, sep, limit);
+                    local min_depth = limit + 1;
+                    local pathArr =
+                        if std.length(_tmp) < min_depth then
+                            # pad array by repeating the last element the required amout of times
+                            _tmp + std.repeat([_tmp[std.length(_tmp)-1]], min_depth - std.length(_tmp))
+                        else
+                            _tmp
+                    ;
+                    out + _f._to_nested(
+                        std.map(keyFunc, pathArr),
+                        {
+                            value: item.value,
+                            unit: '',
+                        }
+                    )
+                ,
+                std.objectKeysValues(obj),
+                init,
+            )
+        ,
+
+        # Return a new object with only the properties with numeric values (root level only)
+        filter_numeric(obj)::
+            if std.isObject(obj) then
+                {
+                    [item.key]: item.value
+                    for item in std.objectKeysValues(obj)
+                    if std.isNumber(item.value)
+                }
+            else
+                {}
+        ,
+
+        # Return an new object with only properties with non-numeric values (root level only)
+        filter_meta(obj)::
+            if std.isObject(obj) then
+                {
+                    [item.key]: item.value
+                    for item in std.objectKeysValues(obj)
+                    if !std.isNumber(item.value)
+                }
+            else
+                {}
+        ,
+
+        # Default measurement fields
+        defaults(serial, type='thinedge')::
+            {
+                type: type,
+                time: std.native('Now')(),
+                externalSource: {
+                    externalId: serial,
+                    type: 'c8y_Serial',
+                },
+            }
+        ,
+    },
 }
