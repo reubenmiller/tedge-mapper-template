@@ -52,12 +52,13 @@ routes:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
+      local units = import 'units.json';
       local prefix = std.split(topic, '/measurements-group/')[0];
       local serial = tedge.getSerial(prefix, meta.device_id);
 
       local type = std.splitLimitR(topic, '/', 2)[1];
       local group = std.splitLimitR(topic, '/', 2)[2];
-      local measurements = tedge.measurements.from_simple_obj(group, message);
+      local measurements = tedge.measurements.from_simple_obj(group, message, units, function(k) std.join('.', [group, k]));
 
       {
         topic: 'c8y/measurement/measurements/create',
@@ -86,6 +87,7 @@ routes:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
+      local units = import 'units.json';
       local prefix = std.split(topic, '/measurements-group/')[0];
       local serial = tedge.getSerial(prefix, meta.device_id);
 
@@ -101,12 +103,11 @@ routes:
           {
             time: if std.length(_parts) > 0 && !std.isEmpty(_parts[0]) then _parts[0] else _.Now(),
             value: std.parseJson(if std.length(_parts) > 1 && !std.isEmpty(_parts[1]) then _parts[1] else '0'),
-            unit: if std.length(_parts) > 2 then _parts[2] else '',
+            [if std.length(_parts) > 2 then 'unit']: _parts[2],
           }
         else
           {
             value: message,
-            unit: '',
             time: _.Now(),
           }
       ;
@@ -115,8 +116,7 @@ routes:
       local measurements = {
         time: norm_message.time,
         [group]: {
-          [name]: tedge.measurements.to_meas_value(norm_message)
-          ,
+          [name]: tedge.measurements.to_meas_value(norm_message, std.join('.', [group, name]), units),
         },
       };
 
@@ -148,12 +148,13 @@ routes:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
+      local units = import 'units.json';
       local prefix = std.split(topic, '/keyvalue/')[0];
       local type = std.splitLimitR(topic, "/", 1)[1];
       local serial = tedge.getSerial(prefix, meta.device_id);
 
       local measurements = tedge.measurements.unflatten(
-        tedge.measurements.filter_numeric(message)
+        tedge.measurements.filter_numeric(message, units)
       );
 
       {

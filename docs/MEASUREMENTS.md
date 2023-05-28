@@ -19,6 +19,21 @@ Splitting a message into different groups has an advantages because it allows ot
 
 For high ingestion use-cases, messages can be publish to the type topic which sends measurement with multiple groups to one topic. These types of large measurements will be harder for other components to subscribe to.
 
+### Units
+
+A simple lookup mechanism has been added to show an example how units could be added to the measurements via a static json file. The units file can be imported in the templates, and the units will be looked up via the `group + '.' + name` syntax.
+
+Below shows an example of the `units.json` used by the routes.
+
+```json
+{
+  "environment.humidity": "%",
+  "environment.temperature": "˚C"
+}
+```
+
+The `units.json` file could be updated via the tedge configuration plugin, or by just manually replacing the file (though currently the service will need to be reloaded for it to take effect).
+
 ### By type
 
 Use a simple key/value approach, where nested groups are represented by using dot notation for the keys.
@@ -207,11 +222,11 @@ environment.humidity,90,%
 {
   "environment": {
     "humidity": {
-      "units": "%",
+      "unit": "%",
       "value": "90"
     },
     "temperature": {
-      "units": "˚C",
+      "unit": "˚C",
       "value": "10.0"
     }
   },

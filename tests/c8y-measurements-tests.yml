@@ -29,11 +29,11 @@ tests:
             {
               "environment": {
                 "humidity": {
-                  "unit": "",
+                  "unit": "%",
                   "value": 10
                 },
                 "temperature": {
-                  "unit": "",
+                  "unit": "˚C",
                   "value": 20
                 }
               },
@@ -72,7 +72,7 @@ tests:
             {
               "environment": {
                 "humidity": {
-                  "unit": "",
+                  "unit": "%",
                   "value": 90
                 }
               },
@@ -106,7 +106,7 @@ tests:
             {
               "environment": {
                 "humidity": {
-                  "unit": "",
+                  "unit": "%",
                   "value": 90.1
                 }
               },
@@ -148,11 +148,11 @@ tests:
               },
               "environment": {
                 "humidity": {
-                  "unit": "",
+                  "unit": "%",
                   "value": 90
                 },
                 "temperature": {
-                  "unit": "",
+                  "unit": "˚C",
                   "value": 10
                 }
               },
@@ -189,11 +189,11 @@ tests:
             {
               "environment": {
                 "humidity": {
-                  "units": "%",
+                  "unit": "%",
                   "value": "90"
                 },
                 "temperature": {
-                  "units": "˚C",
+                  "unit": "˚C",
                   "value": "10.0"
                 }
               },
