@@ -1,0 +1,206 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/reubenmiller/commander/feat/handle-nested-files/schema.json
+
+config:
+  env:
+    C8Y_SETTINGS_DEFAULTS_CACHE: true
+
+tests:
+  # -------------------------------------------
+  # Multiple values under a single group via type/group
+  # -------------------------------------------
+  main device - group topic:
+    command: |
+      go run main.go routes check \
+        --dir ./routes \
+        -t tedge/measurements-group/mytype/environment \
+        -m '{"temperature":20.0,"humidity": 10.0,"other":{"data":"some meta info"},"time":"10"}' \
+        -s \
+        --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-measurements-group-topic (tedge/measurements-group/+/+, tedge/+/measurements-group/+/+)
+
+        Input Message
+          topic:    tedge/measurements-group/mytype/environment
+
+        Output Message (mqtt)
+          topic:    c8y/measurement/measurements/create
+
+            {
+              "environment": {
+                "humidity": {
+                  "unit": "",
+                  "value": 10
+                },
+                "temperature": {
+                  "unit": "",
+                  "value": 20
+                }
+              },
+              "externalSource": {
+                "externalId": "sim_tedge01",
+                "type": "c8y_Serial"
+              },
+              "other": {
+                "data": "some meta info"
+              },
+              "time": "10",
+              "type": "mytype"
+            }
+
+  # -------------------------------------------
+  # Single value via type/group/name
+  # -------------------------------------------
+  main device - group/name topic with additional meta information:
+    command: |
+      go run main.go routes check \
+        --dir ./routes \
+        -t tedge/measurements-group/mytype/environment/humidity \
+        -m '{"value": 90.0,"other":{"data":"some meta info"},"time":"10"}' \
+        -s \
+        --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-measurements-group-name-topic (tedge/measurements-group/+/+/+, tedge/+/measurements-group/+/+/+)
+
+        Input Message
+          topic:    tedge/measurements-group/mytype/environment/humidity
+
+        Output Message (mqtt)
+          topic:    c8y/measurement/measurements/create
+
+            {
+              "environment": {
+                "humidity": {
+                  "unit": "",
+                  "value": 90
+                }
+              },
+              "externalSource": {
+                "externalId": "sim_tedge01",
+                "type": "c8y_Serial"
+              },
+              "other": {
+                "data": "some meta info"
+              },
+              "time": "10",
+              "type": "mytype"
+            }
+
+  main device - group/name topic with no meta information:
+    command: |
+      go run main.go routes check \
+        --dir ./routes \
+        -t tedge/measurements-group/mytype/environment/humidity \
+        -m '1685280369,90.1' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-measurements-group-name-topic (tedge/measurements-group/+/+/+, tedge/+/measurements-group/+/+/+)
+
+        Input Message
+          topic:    tedge/measurements-group/mytype/environment/humidity
+
+        Output Message (mqtt)
+          topic:    c8y/measurement/measurements/create
+
+            {
+              "environment": {
+                "humidity": {
+                  "unit": "",
+                  "value": 90.1
+                }
+              },
+              "externalSource": {
+                "externalId": "sim_tedge01",
+                "type": "c8y_Serial"
+              },
+              "time": "1685280369",
+              "type": "mytype"
+            }
+
+  # -------------------------------------------
+  # Multiple values via dot notation
+  # -------------------------------------------
+  main device - dot notation measurements:
+    command: |
+      go run main.go routes check \
+        --dir ./routes \
+        -t tedge/keyvalue/mytype \
+        -m '{"time": "10", "active":1,"environment.temperature": 10.0, "environment.humidity":90,"other":"test"}' \
+        -s \
+        --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-measurements-flat (tedge/keyvalue/+, tedge/+/keyvalue/+)
+
+        Input Message
+          topic:    tedge/keyvalue/mytype
+
+        Output Message (mqtt)
+          topic:    c8y/measurement/measurements/create
+
+            {
+              "active": {
+                "active": {
+                  "unit": "",
+                  "value": 1
+                }
+              },
+              "environment": {
+                "humidity": {
+                  "unit": "",
+                  "value": 90
+                },
+                "temperature": {
+                  "unit": "",
+                  "value": 10
+                }
+              },
+              "externalSource": {
+                "externalId": "sim_tedge01",
+                "type": "c8y_Serial"
+              },
+              "other": "test",
+              "time": "10",
+              "type": "mytype"
+            }
+
+  # -------------------------------------------
+  # Multiple values via text
+  # -------------------------------------------
+  main device - list of text based measurements:
+    command: |
+      go run main.go routes check \
+        --dir ./routes \
+        -t tedge/measurements-bulk-text/mytype \
+        -m "time=12345\nenvironment.temperature=10.0 ˚C\nenvironment.humidity=90 %" \
+        -s \
+        --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-measurements-create (tedge/measurements-bulk-text/+, tedge/+/measurements-bulk-text/+)
+
+        Input Message
+          topic:    tedge/measurements-bulk-text/mytype
+
+        Output Message (mqtt)
+          topic:    c8y/measurement/measurements/create
+
+            {
+              "environment": {
+                "humidity": {
+                  "units": "%",
+                  "value": "90"
+                },
+                "temperature": {
+                  "units": "˚C",
+                  "value": "10.0"
+                }
+              },
+              "externalSource": {
+                "externalId": "sim_tedge01",
+                "type": "c8y_Serial"
+              },
+              "time": "12345",
+              "type": "mytype"
+            }
