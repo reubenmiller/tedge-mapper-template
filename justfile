@@ -4,12 +4,16 @@ default:
     @just --list -f "{{justfile()}}"
 
 # Start the demo with the latest built package
-demo arch='arm64' args='--no-prompt':
+start-demo arch='arm64' args='--no-prompt':
     just release-local
     rm -f demo/dist/tedge-mapper-template*.deb
     cp dist/tedge-mapper-template_*{{arch}}*deb demo/dist/
     cd demo && just up
     cd demo && just bootstrap {{args}}
+
+# Stop demo
+stop-demo:
+    cd demo && just down
 
 # Open a shell on the demo (if running)
 demo-shell:
