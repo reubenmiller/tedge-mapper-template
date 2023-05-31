@@ -4,7 +4,16 @@
 dist/*
 !dist/.gitkeep
 main
+!main/
 output/
 .env
 .DS_Store
 
+# python
+.venv/
+*.pyc
+__pycache__
+.pytest_cache
+log.html
+output.xml
+report.html
