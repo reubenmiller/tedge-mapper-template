@@ -53,6 +53,46 @@
         )
     ,
 
+    lookupID(localName, meta={})::
+        local device_mapping = import 'device_mapping.json';
+        std.get(device_mapping, localName, localName)
+    ,
+
+    getExternalDeviceId(topic, meta={})::
+        local device_mapping = import 'device_mapping.json';
+        local localName = std.split(topic, '/')[1];
+        std.get(device_mapping, localName, localName)
+    ,
+    getExternalDeviceSource(topic, meta={})::
+        {
+            externalSource: {
+                externalId: _self.getExternalDeviceId(topic, meta),
+                type: "c8y_Serial",
+            },
+        }
+    ,
+
+    getExternalServiceId(topic, meta={})::
+        local device_mapping = import 'device_mapping.json';
+        local parts = std.split(topic, '/');
+        '%s_%s' % [
+            std.get(device_mapping, parts[1], parts[1]),
+            parts[3]
+        ]
+    ,
+    getExternalServiceSource(topic, meta={})::
+        {
+            externalSource: {
+                externalId: _self.getExternalServiceId(topic, meta),
+                type: "c8y_Serial",
+            },
+        }
+    ,
+
+    getType(topic="/")::
+        std.splitLimitR(topic, "/", 1)[1]
+    ,
+
     getExternalId(items=[], sep='_')::
         std.join(sep, items)
     ,
