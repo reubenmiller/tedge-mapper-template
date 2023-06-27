@@ -127,11 +127,19 @@ nfpms:
         dst: /etc/tedge-mapper-template/routes/
         type: config|noreplace
 
+      - src: routes/proposal1/*.yaml
+        dst: /etc/tedge-mapper-template/proposal1/
+        type: config|noreplace
+
       - src: routes-simulation/child/*.yaml
         dst: /etc/tedge-mapper-template/routes-simulation/child/
         type: config|noreplace
 
       - src: lib/*.libsonnet
+        dst: /etc/tedge-mapper-template/lib/
+        type: config|noreplace
+
+      - src: lib/*.json
         dst: /etc/tedge-mapper-template/lib/
         type: config|noreplace
 

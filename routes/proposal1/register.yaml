@@ -12,10 +12,10 @@ routes:
       local tedge = import 'tedge.libsonnet';
 
       local name = message['id-prefix'];
-      local externalID = tedge.lookupID(name);
+      local externalID = tedge.lookupID(name, meta);
       local outTopic =
         if std.get(message, 'parent', '') != '' then
-          'c8y/s/us/%s' % tedge.lookupID(message.parent)
+          'c8y/s/us/%s' % tedge.lookupID(message.parent, meta)
         else
           'c8y/s/us'
       ;

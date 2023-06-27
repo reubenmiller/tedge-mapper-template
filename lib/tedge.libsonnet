@@ -55,13 +55,16 @@
 
     lookupID(localName, meta={})::
         local device_mapping = import 'device_mapping.json';
-        std.get(device_mapping, localName, localName)
+        if localName in device_mapping then
+            std.get(device_mapping, localName, localName)
+        else
+            std.join('_', [meta.device_id, localName])
     ,
 
     getExternalDeviceId(topic, meta={})::
         local device_mapping = import 'device_mapping.json';
         local localName = std.split(topic, '/')[1];
-        std.get(device_mapping, localName, localName)
+        _self.lookupID(localName, meta)
     ,
     getExternalDeviceSource(topic, meta={})::
         {
@@ -73,10 +76,9 @@
     ,
 
     getExternalServiceId(topic, meta={})::
-        local device_mapping = import 'device_mapping.json';
         local parts = std.split(topic, '/');
         '%s_%s' % [
-            std.get(device_mapping, parts[1], parts[1]),
+            _self.lookupID(parts[1], meta),
             parts[3]
         ]
     ,
