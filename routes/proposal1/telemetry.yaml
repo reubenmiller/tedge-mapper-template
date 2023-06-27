@@ -1,0 +1,165 @@
+# yaml-language-server: $schema=../../spec/schema.json
+---
+routes:
+- name: c8y-measurements-devices
+  topics:
+    - tedge/+/device/telemetry/measurements/+
+  description: |
+    Measurement for devices
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      local units = import 'units.json';
+      local type = std.splitLimitR(topic, "/", 1)[1];
+      local serial = tedge.getExternalDeviceId(topic, meta);
+
+      local measurements = tedge.measurements.unflatten(
+        tedge.measurements.filter_numeric(message, units)
+      );
+
+      {
+        topic: 'c8y/measurement/measurements/create',
+        context: false,
+        message: tedge.measurements.defaults(serial, type) + tedge.measurements.filter_meta(message) + measurements,
+        skip: std.length($.message) == 0,
+      }
+
+- name: c8y-measurements-services
+  topics:
+    - tedge/+/service/+/telemetry/measurements/+
+  description: |
+    Measurement for services
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      local units = import 'units.json';
+      local type = std.splitLimitR(topic, "/", 1)[1];
+      local serial = tedge.getExternalServiceId(topic, meta);
+
+      local measurements = tedge.measurements.unflatten(
+        tedge.measurements.filter_numeric(message, units)
+      );
+
+      {
+        topic: 'c8y/measurement/measurements/create',
+        context: false,
+        message: tedge.measurements.defaults(serial, type) + tedge.measurements.filter_meta(message) + measurements,
+        skip: std.length($.message) == 0,
+      }
+
+- name: c8y-events-devices
+  topics:
+    - tedge/+/device/telemetry/events/+
+  description: |
+    Events for devices
+
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      assert 'text' in message : 'Message must contain .text';
+      {
+        topic: 'c8y/event/events/create',
+        context: false,
+        message: tedge.getExternalDeviceSource(topic, meta) + {
+          type: tedge.getType(topic),
+          text: message.text,
+        } + message,
+      }
+
+- name: c8y-events-services
+  topics:
+    - tedge/+/service/+/telemetry/events/+
+  description: |
+    Events for services
+
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      assert 'text' in message : 'Message must contain .text';
+      {
+        topic: 'c8y/event/events/create',
+        context: false,
+        message: tedge.getExternalServiceSource(topic, meta) + {
+          type: tedge.getType(topic),
+          text: message.text,
+        } + message,
+      }
+
+- name: c8y-alarms-devices
+  topics:
+    - tedge/+/device/telemetry/alarms/+
+  description: |
+    Alarms for devices
+
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      assert 'text' in message : 'Message must contain .text';
+      {
+        topic: 'c8y/alarm/alarms/create',
+        context: false,
+        message: tedge.getExternalDeviceSource(topic, meta) + {
+          type: tedge.getType(topic),
+          severity: 'CRITICAL', // default
+        } + message,
+      }
+
+- name: c8y-alarms-services
+  topics:
+    - tedge/+/service/+/telemetry/alarms/+
+  description: |
+    Alarms for services
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      assert 'text' in message : 'Message must contain .text';
+      {
+        topic: 'c8y/alarm/alarms/create',
+        context: false,
+        message: tedge.getExternalServiceSource(topic, meta) + {
+          type: tedge.getType(topic),
+          severity: 'CRITICAL', // default
+        } + message,
+      }
+
+- name: c8y-inventory-devices
+  topics:
+    - tedge/+/device/telemetry/inventory/+
+  description: |
+    Inventory for devices
+
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      {
+        topic: 'c8y/inventory/managedObjects/update/%s' % tedge.getExternalDeviceId(topic, meta),
+        context: false,
+        message: {
+          [tedge.getType(topic)]: message,
+        },
+      }
+
+- name: c8y-inventory-services
+  topics:
+    - tedge/+/service/+/telemetry/inventory/+
+  description: |
+    Inventory for services
+
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      {
+        topic: 'c8y/inventory/managedObjects/update/%s' % tedge.getExternalServiceId(topic, meta),
+        context: false,
+        message: {
+          [tedge.getType(topic)]: message,
+        },
+      }

@@ -1,4 +1,5 @@
 {
   "environment.humidity": "%",
-  "environment.temperature": "˚C"
+  "environment.temperature": "˚C",
+  "env.temp": "˚C"
 }
