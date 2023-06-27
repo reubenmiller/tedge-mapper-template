@@ -66,6 +66,7 @@ routes:
         message: tedge.getExternalDeviceSource(topic, meta) + {
           type: tedge.getType(topic),
           text: message.text,
+          time: std.native('Now')(),
         } + message,
       }
 
@@ -86,6 +87,7 @@ routes:
         message: tedge.getExternalServiceSource(topic, meta) + {
           type: tedge.getType(topic),
           text: message.text,
+          time: std.native('Now')(),
         } + message,
       }
 
@@ -106,6 +108,7 @@ routes:
         message: tedge.getExternalDeviceSource(topic, meta) + {
           type: tedge.getType(topic),
           severity: 'CRITICAL', // default
+          time: std.native('Now')(),
         } + message,
       }
 
@@ -125,6 +128,7 @@ routes:
         message: tedge.getExternalServiceSource(topic, meta) + {
           type: tedge.getType(topic),
           severity: 'CRITICAL', // default
+          time: std.native('Now')(),
         } + message,
       }
 
