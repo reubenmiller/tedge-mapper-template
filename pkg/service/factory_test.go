@@ -61,7 +61,7 @@ func Test_RemoveContext(t *testing.T) {
 
 	for _, c := range testcases {
 		route.Template = c.Route.Template
-		handler := NewStreamFactory(nil, nil, c.Route, 2, 0)
+		handler := NewStreamFactory(nil, nil, c.Route, nil, 2, 0)
 		out, err := handler(c.Topic, c.Message)
 		assert.NoError(t, err)
 		assert.JSONEq(t, c.ExpectedMsg, out.MessageString())
@@ -137,7 +137,7 @@ func Test_MaxDepthLimit(t *testing.T) {
 	}
 
 	for _, c := range testcases {
-		handler := NewStreamFactory(nil, nil, c.Route, c.Depth, 0)
+		handler := NewStreamFactory(nil, nil, c.Route, nil, c.Depth, 0)
 		msg := &streamer.OutputMessage{
 			Topic:   c.Topic,
 			Message: c.Message,

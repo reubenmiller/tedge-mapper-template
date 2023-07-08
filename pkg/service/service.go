@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/reubenmiller/go-c8y/pkg/c8y"
@@ -23,11 +25,79 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type Entity struct {
+	ID          string          `json:"@id"`
+	Type        string          `json:"@type"`
+	DisplayName string          `json:"displayName"`
+	Contents    []EntityContent `json:"contents,omitempty"`
+}
+
+type EntityContent struct {
+	ID     string `json:"@id"`
+	Type   string `json:"@type"`
+	Schema string `json:"schema"`
+}
+
+func NewEntityStore() *EntityStore {
+	return &EntityStore{
+		entities: make(map[string]Entity),
+	}
+}
+
+type EntityStore struct {
+	mu       sync.RWMutex
+	entities map[string]Entity
+	cache    []byte
+}
+
+func (s *EntityStore) SerializedEntities() []byte {
+	slog.Info("Serializing entries")
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.cache
+}
+
+func (s *EntityStore) Set(key string, entity Entity) error {
+	if key == "" {
+		return fmt.Errorf("key can not be empty")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	slog.Info("Updating entity.", "key", key, "entity", entity)
+	s.entities[key] = entity
+
+	// update cache
+	b, err := json.Marshal(s.entities)
+	if err != nil {
+		return err
+	}
+	s.cache = b
+	return nil
+}
+
+func (s *EntityStore) Get(key string) (Entity, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	entity, ok := s.entities[key]
+
+	if !ok {
+		return Entity{}, fmt.Errorf("not found")
+	}
+	return entity, nil
+}
+
 type Service struct {
 	Client        mqtt.Client
 	APIClient     *APIClient
 	Subscriptions map[string]byte
 	Routes        []routes.Route
+	EntityStore   *EntityStore
+}
+
+func (s *Service) GetVariables() string {
+	return string(s.EntityStore.SerializedEntities())
 }
 
 type APIClient struct {
@@ -197,6 +267,7 @@ func NewService(broker string, clientID string, cleanSession bool, httpEndpoint 
 		Client:        client,
 		Subscriptions: map[string]byte{},
 		Routes:        []routes.Route{},
+		EntityStore:   NewEntityStore(),
 	}
 	service.APIClient = NewCumulocityClient(httpEndpoint, RequestCumulocityToken(client))
 
@@ -286,6 +357,7 @@ func (s *Service) Register(topics []string, qos byte, handler MessageHandler) er
 			slog.Warn("Duplicate topic detected. The new handler will replace the previous one.", "topic", topic)
 		}
 		s.Subscriptions[topic] = qos
+		slog.Info("Adding mqtt route.", "topic", topic)
 		s.Client.AddRoute(topic, handlerWrapper)
 	}
 	return nil

@@ -108,8 +108,8 @@ func (m *OutputMessage) MessageString() string {
 	}
 }
 
-func (s *Streamer) Process(topic, message string) (*OutputMessage, error) {
-	out, err := s.Engine.Execute(topic, message)
+func (s *Streamer) Process(topic, message string, variables string) (*OutputMessage, error) {
+	out, err := s.Engine.Execute(topic, message, variables)
 	if err != nil {
 		return nil, err
 	}

@@ -50,7 +50,9 @@ func WithRESTRequest(client *APIClient, host, method, path string, message any) 
 	}
 }
 
-func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Route, maxDepth int, postDelay time.Duration, opts ...jsonnet.TemplateOption) MessageHandler {
+type VariablesFactory func() string
+
+func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Route, variablesFactory VariablesFactory, maxDepth int, postDelay time.Duration, opts ...jsonnet.TemplateOption) MessageHandler {
 
 	if maxDepth <= 0 {
 		maxDepth = 3
@@ -64,6 +66,12 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 
 	if route.PreProcessor != nil {
 		route.PreparePreProcessor()
+	}
+
+	variablesFunc := func() string { return "" }
+
+	if variablesFactory != nil {
+		variablesFunc = variablesFactory
 	}
 
 	return func(topic, message string) (*streamer.OutputMessage, error) {
@@ -81,7 +89,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 			}
 		}
 
-		sm, err := stream.Process(topic, message)
+		sm, err := stream.Process(topic, message, variablesFunc())
 		if err != nil {
 			slog.Error("Template error.", "route", route.Name)
 
@@ -324,8 +332,52 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, httpEn
 	}
 
 	meta := NewMetaData(metaOptions...)
-	routes := app.ScanMappingFiles(routeDirs)
 
+	// Handle entity registration independently
+	enableRegistration := true
+	if enableRegistration {
+		if err := app.Register([]string{
+			"te/+/+",
+			"te/+/+/+/+",
+		}, 1, func(topic, message_in string) (message_out *streamer.OutputMessage, err error) {
+			slog.Info("Received registration message.", "topic", topic, "message", message_in)
+			nonEmptyParts := make([]string, 0)
+			for _, part := range strings.Split(topic, "/") {
+				if part != "" {
+					nonEmptyParts = append(nonEmptyParts, part)
+				}
+			}
+			name := strings.Join(nonEmptyParts, "/")
+
+			entity := Entity{}
+			if err := json.Unmarshal([]byte(message_in), &entity); err != nil {
+				return nil, err
+			}
+
+			switch strings.Count(topic, "/") {
+			case 2:
+				slog.Info("Device registration", "topic", topic, "name", name)
+			case 4:
+				slog.Info("Application registration", "topic", topic, "name", name)
+			default:
+				return nil, fmt.Errorf("unknown registration error")
+			}
+
+			if err := app.EntityStore.Set(name, entity); err != nil {
+				slog.Warn("Could not register entity", "error", err)
+				return nil, err
+			}
+
+			slog.Info("Registered entity successfully", "entity", slog.StringValue(fmt.Sprintf("%#v", entity)))
+			return &streamer.OutputMessage{
+				Skip: true,
+			}, nil
+		}); err != nil {
+			slog.Error("registration failed", err)
+		}
+	}
+
+	routes := app.ScanMappingFiles(routeDirs)
 	for _, route := range routes {
 		if !route.Skip {
 			slog.Info("Registering route.", "name", route.Name, "topics", route.DisplayTopics())
@@ -336,6 +388,7 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, httpEn
 					app.Client,
 					app.APIClient,
 					route,
+					app.GetVariables,
 					maxdepth,
 					postDelay,
 					jsonnet.WithMetaData(meta),

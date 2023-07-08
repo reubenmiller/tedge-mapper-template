@@ -225,7 +225,7 @@ func removeHeader(tmpl string) string {
 	return tmpl
 }
 
-func (e *JsonnetEngine) Execute(topic, input string) (string, error) {
+func (e *JsonnetEngine) Execute(topic, input string, variables string) (string, error) {
 	e.vm.ExtVar("message", "do something")
 	sb := strings.Builder{}
 	sb.WriteString(fmt.Sprintf("local topic = '%s';\n", topic))
@@ -237,6 +237,12 @@ func (e *JsonnetEngine) Execute(topic, input string) (string, error) {
 	} else {
 		sb.WriteString(fmt.Sprintf("local _input = '%s';\n", input))
 	}
+
+	slog.Info("json template.", "variables", variables)
+	if variables == "" {
+		variables = "{}"
+	}
+	sb.WriteString(fmt.Sprintf("local variables = %s;\n", variables))
 
 	sb.WriteString("local message = if std.isObject(_input) then _input + {_ctx:: null} else _input;\n")
 	if inputIsObject {

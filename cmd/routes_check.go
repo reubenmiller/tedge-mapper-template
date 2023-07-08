@@ -122,7 +122,7 @@ Examples:
 
 					foundRoute = true
 					// cmd.Printf("Route:\t%s\n", route.Name)
-					handler := service.NewStreamFactory(nil, nil, route, maxDepth, 0,
+					handler := service.NewStreamFactory(nil, nil, route, nil, maxDepth, 0,
 						jsonnet.WithMetaData(meta),
 						jsonnet.WithDebug(debug),
 						jsonnet.WithDryRun(dryRun),
