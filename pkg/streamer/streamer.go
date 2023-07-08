@@ -17,6 +17,8 @@ type SimpleOutputMessage struct {
 	Message any     `json:"message"`
 	Skip    bool    `json:"skip"`
 	Delay   float32 `json:"delay"`
+	Retain  bool    `json:"retain"`
+	QoS     float32 `json:"qos"`
 }
 
 func (m *SimpleOutputMessage) MessageString() string {
@@ -29,6 +31,17 @@ func (m *SimpleOutputMessage) MessageString() string {
 			return ""
 		}
 		return string(out)
+	}
+}
+
+func (m *SimpleOutputMessage) GetQoS() byte {
+	switch m.QoS {
+	case 1:
+		return 1
+	case 2:
+		return 2
+	default:
+		return 0
 	}
 }
 
@@ -63,6 +76,8 @@ type OutputMessage struct {
 	Skip       bool                  `json:"skip"`
 	End        bool                  `json:"end"`
 	Context    *bool                 `json:"context,omitempty"`
+	Retain     bool                  `json:"retain,omitempty"`
+	QoS        float32               `json:"qos,omitempty"`
 }
 
 func NewStreamer(engine template.Templater) *Streamer {
@@ -82,6 +97,17 @@ func (m *OutputMessage) GetType() string {
 		return "api"
 	}
 	return "mqtt"
+}
+
+func (m *OutputMessage) GetQoS() byte {
+	switch m.QoS {
+	case 1:
+		return 1
+	case 2:
+		return 2
+	default:
+		return 0
+	}
 }
 
 func (m *OutputMessage) DisableContext() bool {

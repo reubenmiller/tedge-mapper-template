@@ -36,9 +36,9 @@ func optionalDelay(delaySec float32, f func()) {
 	}
 }
 
-func WithMQTTPublisher(client mqtt.Client, topic string, message any) func() {
+func WithMQTTPublisher(client mqtt.Client, topic string, qos byte, retain bool, message any) func() {
 	return func() {
-		client.Publish(topic, 0, false, message)
+		client.Publish(topic, qos, retain, message)
 	}
 }
 
@@ -118,7 +118,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 			case string:
 				slog.Info("Publishing update message.", "topic", m.Topic, "message", m.Message)
 				if client != nil && !engine.DryRun() {
-					optionalDelay(m.Delay, WithMQTTPublisher(client, m.Topic, m.Message))
+					optionalDelay(m.Delay, WithMQTTPublisher(client, m.Topic, m.GetQoS(), m.Retain, m.Message))
 				}
 			default:
 				preMsg, preErr := json.Marshal(m.Message)
@@ -127,7 +127,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 				} else {
 					slog.Info("Publishing update message.", "topic", m.Topic, "message", string(preMsg))
 					if client != nil && !engine.DryRun() {
-						optionalDelay(m.Delay, WithMQTTPublisher(client, m.Topic, preMsg))
+						optionalDelay(m.Delay, WithMQTTPublisher(client, m.Topic, m.GetQoS(), m.Retain, preMsg))
 					}
 				}
 			}
@@ -166,14 +166,14 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 			// TODO: Switch to using the .MessageString() method
 			if sm.IsMQTTMessage() {
 				if sm.RawMessage != "" {
-					slog.Info("Publishing new message.", "topic", sm.Topic, "message", sm.RawMessage, "delay", sm.Delay)
+					slog.Info("Publishing new raw message.", "topic", sm.Topic, "message", sm.RawMessage, "delay", sm.Delay)
 					if client != nil && !engine.DryRun() {
-						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, sm.RawMessage))
+						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, sm.GetQoS(), sm.Retain, sm.RawMessage))
 					}
 				} else {
 					slog.Info("Publishing new message.", "topic", sm.Topic, "message", string(output), "delay", sm.Delay)
 					if client != nil && !engine.DryRun() {
-						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, output))
+						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, sm.GetQoS(), sm.Retain, output))
 					}
 				}
 			}
