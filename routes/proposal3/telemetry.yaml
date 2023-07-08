@@ -1,0 +1,93 @@
+# yaml-language-server: $schema=../../spec/schema.json
+---
+routes:
+- name: c8y-measurements
+  topics:
+    - te/+/+/+/+/m/+
+  description: |
+    Measurements
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      local units = import 'units.json';
+      local type = std.splitLimitR(topic, "/", 1)[1];
+
+      local target = tedge.proposal3.getTarget(topic, meta, entities=variables);
+      local serial = target["@id"];
+
+      local measurements = tedge.measurements.unflatten(
+        tedge.measurements.filter_numeric(message, units)
+      );
+
+      {
+        topic: 'c8y/measurement/measurements/create',
+        context: false,
+        message: tedge.measurements.defaults(serial, type) + tedge.measurements.filter_meta(message) + measurements,
+        skip: std.length($.message) == 0,
+      }
+
+- name: c8y-events
+  topics:
+    - te/+/+/+/+/e/+
+  description: |
+    Events
+
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      local type = std.splitLimitR(topic, "/", 1)[1];
+      assert 'text' in message : 'Message must contain .text';
+      {
+        topic: 'c8y/event/events/create',
+        context: false,
+        message: tedge.proposal3.getExternalDeviceSource(topic, meta, variables) + {
+          type: type,
+          text: message.text,
+          time: std.native('Now')(),
+        } + message,
+      }
+
+- name: c8y-alarms
+  topics:
+    - te/+/+/+/+/a/+
+  description: |
+    Alarms
+
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      local type = std.splitLimitR(topic, "/", 1)[1];
+      assert 'text' in message : 'Message must contain .text';
+      {
+        topic: 'c8y/alarm/alarms/create',
+        context: false,
+        message: tedge.proposal3.getExternalDeviceSource(topic, meta, variables) + {
+          type: type,
+          text: message.text,
+          severity: 'CRITICAL', // default
+          time: std.native('Now')(),
+        } + message,
+      }
+
+- name: c8y-inventory
+  topics:
+    - te/+/+/+/+/data/+
+  description: |
+    Inventory
+
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      local target = tedge.proposal3.getTarget(topic, meta, entities=variables);
+      local serial = target["@id"];
+      {
+        topic: 'c8y/inventory/managedObjects/update/%s' % serial,
+        context: false,
+        message: {
+          [tedge.getType(topic)]: message,
+        },
+      }

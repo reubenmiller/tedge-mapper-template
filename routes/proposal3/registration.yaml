@@ -1,0 +1,104 @@
+# yaml-language-server: $schema=../../spec/schema.json
+---
+routes:
+- name: c8y-entity-registration
+  topics:
+    - te/+/+
+    - te/+/+//
+  description: |
+    Register an entity
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      local target = tedge.proposal3.getTarget(topic, meta, entities=variables);
+      local serial = target["@id"];
+      local entityType = std.asciiLower(std.get(message, "@type", std.get(target, "entity")));
+
+      local parent = tedge.proposal3.getTarget(std.get(message, "@parent", ""), meta, entities=variables);
+
+      local outTopic = 
+        if !std.isEmpty(std.get(parent, "@id", "")) then
+          'c8y/s/us/%s' % parent["@id"]
+        else
+          'c8y/s/us'
+      ;
+
+      local options = {
+        'child-device': {
+          topic: outTopic,
+          raw_message: '101,"%s","%s","%s"' % [
+            serial,
+            std.get(message, 'displayName', serial),
+            std.get(message, 'type', 'c8y_MQTTChildDevice'),
+          ],
+        },
+        'device': {
+          topic: outTopic,
+          raw_message: '100,"%s","%s"' % [
+            std.get(message, 'displayName', std.get(meta, "device_id", serial)),
+            std.get(message, 'type', 'thin-edge.io'),
+          ],
+        },
+      };
+
+      assert entityType != null : 'Empty entity type';
+      assert std.objectHasAll(options, entityType) : 'Unknown entity type. got=%s, expected=%s' % [entityType, std.join(",", std.objectFields(options))];
+
+      {context: false} + options[entityType]
+
+- name: c8y-component-registration
+  topics:
+    - te/+/+/+/+
+  description: |
+    Register a component
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      local target = tedge.proposal3.getTarget(topic, meta, entities=variables);
+      local serial = std.get(message, "@id", target["@id"]);
+
+      local parent = tedge.proposal3.getTarget(std.get(message, "@parent", ""), meta, entities=variables);
+
+      local entityType = std.asciiLower(std.get(message, "@type", std.get(target, "entity")));
+      local componentType = std.asciiLower(std.get(message, "@type", std.get(target, "component")));
+
+      local outTopic = 
+        if !std.isEmpty(std.get(parent, "@id", "")) then
+          'c8y/s/us/%s' % parent["@id"]
+        else
+          'c8y/s/us'
+      ;
+
+      local options = {
+        service: {
+          topic: outTopic,
+          raw_message: '102,"%s","%s","%s","%s"' % [
+            serial,
+            std.get(message, 'type', 'service'),
+            std.get(message, 'displayName', serial),
+            std.get(message, 'status', 'up'),
+          ],
+        },
+        'child-device': {
+          topic: outTopic,
+          raw_message: '101,"%s","%s","%s"' % [
+            serial,
+            std.get(message, 'displayName', serial),
+            std.get(message, 'type', 'tedge_child'),
+          ],
+        },
+        'device': {
+          topic: outTopic,
+          raw_message: '100,"%s","%s"' % [
+            std.get(message, 'displayName', serial),
+            std.get(message, 'type', 'tedge_child'),
+          ],
+        },
+      };
+
+      assert componentType != null : 'Empty component type';
+      assert std.objectHasAll(options, componentType) : 'Unknown component type. got=%s, expected=%s' % [componentType, std.join(",", std.objectFields(options))];
+
+      {context: false} + options[componentType]

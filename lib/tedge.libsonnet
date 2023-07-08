@@ -1,6 +1,84 @@
 {
     local _self = self,
 
+    proposal3:: {
+        local _proposal3 = self,
+
+        getTarget(topic='', meta={}, entities={})::
+            # Get cloud target name from the topic name
+            # It allows a user to define a custom id, or to default to
+            # the topic structure (using the certificate common name as a prefix)
+            #
+            # Examples:
+            #   te/device/main// => <CN>
+            #   te/device/main/service/tedge-agent => <CN>:device:main:service:tedge-agent
+            #   te/my/full/custom/name => <CN>:my:full:custom:name
+            local topic_target = 
+                local tmp = std.join("/", [
+                    part
+                    for part in [meta.device_id] + std.split(topic, '/')[1:5]
+                    if !std.isEmpty(part)
+                ]);
+                # Replace te/device/main with the Common Name value
+                if tmp == "%s/device/main" % meta.device_id then
+                    meta.device_id
+                else
+                    tmp
+            ;
+
+            local defaultValues = {
+                "contents": _proposal3.getEntityType(topic, meta=meta, entities=entities),
+            };
+
+            defaultValues + std.get(entities, topic_target, {"@id": std.strReplace(topic_target, "/", ":")})
+        ,
+
+        getEntityType(topic='', meta={}, entities={})::
+            # Infer the entity type based on the topic
+            # Types:
+            # * device
+            # * child-device
+            # * service
+            #
+            local parts = std.split(topic, "/")[0:5];
+            local entity_namespace = parts[1];
+            local entity_name = parts[2];
+            local component_namespace = parts[3];
+            local component_name = parts[4];
+
+            local entity_types = {
+                "main": "device",
+            };
+            local entity_type = std.get(entity_types, entity_name, "child-device");
+
+            local component_types = {
+                service: "service",
+            };
+            local component_type = std.get(component_types, component_namespace, "");
+            
+            {
+                entity: entity_type,
+                component: component_type,
+                "@id":
+                    if std.isEmpty(component_type) then
+                        std.join(":", [meta.device_id, entity_namespace, entity_name])
+                    else
+                        std.join(":", [meta.device_id, entity_type, component_type, ])
+                ,
+            }
+        ,
+
+        getExternalDeviceSource(topic, meta={}, entities={})::
+            local target = _proposal3.getTarget(topic, meta=meta, entities=entities);
+            {
+                externalSource: {
+                    externalId: target["@id"],
+                    type: "c8y_Serial",
+                },
+            }
+        ,
+    },
+
     # Get the topic prefix, e.g. tedge or tedge/child01
     # depending if the device has a parent or not
     topicPrefix(serial, parent='', prefix='tedge')::
@@ -51,44 +129,6 @@
             "%s/%s" % [smartrest, tmp],
             "/"
         )
-    ,
-
-    lookupID(localName, meta={})::
-        local device_mapping = import 'device_mapping.json';
-        if localName in device_mapping then
-            std.get(device_mapping, localName, localName)
-        else
-            std.join('_', [meta.device_id, localName])
-    ,
-
-    getExternalDeviceId(topic, meta={})::
-        local device_mapping = import 'device_mapping.json';
-        local localName = std.split(topic, '/')[1];
-        _self.lookupID(localName, meta)
-    ,
-    getExternalDeviceSource(topic, meta={})::
-        {
-            externalSource: {
-                externalId: _self.getExternalDeviceId(topic, meta),
-                type: "c8y_Serial",
-            },
-        }
-    ,
-
-    getExternalServiceId(topic, meta={})::
-        local parts = std.split(topic, '/');
-        '%s_%s' % [
-            _self.lookupID(parts[1], meta),
-            parts[3]
-        ]
-    ,
-    getExternalServiceSource(topic, meta={})::
-        {
-            externalSource: {
-                externalId: _self.getExternalServiceId(topic, meta),
-                type: "c8y_Serial",
-            },
-        }
     ,
 
     getType(topic="/")::
