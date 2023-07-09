@@ -9,8 +9,11 @@
 # Description:       Map MQTT message via configurable templates
 ### END INIT INFO
 
+ROUTES_DIR=/etc/tedge-mapper-template/routes
+[ -f /etc/tedge-mapper-template/env ] && . /etc/tedge-mapper-template/env
+
 dir="/var"
-cmd="/usr/bin/tedge-mapper-template --dir /etc/tedge-mapper-template/routes --libdir /etc/tedge-mapper-template/lib"
+cmd="/usr/bin/tedge-mapper-template --dir $ROUTES_DIR --libdir /etc/tedge-mapper-template/lib"
 user="tedge"
 
 name=$(basename "$0")
