@@ -17,5 +17,11 @@
     "te/flowserve/AF012345": {
         "@id": "te:flowserve:AF012345",
         "@type": "child-device"
+    },
+    "te/device/gateway01": {
+        "@type": "child-device",
+        "@id": "te:device:gateway01",
+        "displayName": "gateway01",
+        "type": "SmartHomeHub"
     }
 }
