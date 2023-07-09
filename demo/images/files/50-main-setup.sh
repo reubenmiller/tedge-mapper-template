@@ -36,3 +36,6 @@ sudo systemctl stop tedge-mapper-c8y
 
 sudo systemctl disable tedge-container-monitor ||:
 sudo systemctl stop tedge-container-monitor ||:
+
+sudo systemctl disable collectd ||:
+sudo systemctl stop collectd ||:

@@ -2,6 +2,7 @@ FROM ghcr.io/thin-edge/tedge-demo-main-systemd:20230526.1
 
 # custom configuration
 COPY images/files/tedge-registration-server.env /etc/device-registration-server/env
+COPY images/files/tedge-mapper-template.env /etc/tedge-mapper-template/env
 
 # Install
 COPY dist/tedge*.deb /setup/build/
