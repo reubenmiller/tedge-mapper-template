@@ -27,7 +27,9 @@ import (
 
 type Entity struct {
 	ID          string          `json:"@id"`
-	Type        string          `json:"@type"`
+	EntityType  string          `json:"@type"`
+	ParentID    string          `json:"@parent"`
+	Type        string          `json:"type"`
 	DisplayName string          `json:"displayName"`
 	Contents    []EntityContent `json:"contents,omitempty"`
 }
@@ -35,6 +37,7 @@ type Entity struct {
 type EntityContent struct {
 	ID     string `json:"@id"`
 	Type   string `json:"@type"`
+	Value  string `json:"value"`
 	Schema string `json:"schema"`
 }
 
@@ -55,6 +58,51 @@ func (s *EntityStore) SerializedEntities() []byte {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.cache
+}
+
+// Update multiple entities from json
+func (s *EntityStore) SetFromJSON(content []byte, deleteExisting bool, ignoreErrors bool) error {
+
+	// Marshal to simple map first so that one invalid format of
+	// an entity does not stop importing the others
+	rawEntries := make(map[string]json.RawMessage)
+	err := json.Unmarshal(content, &rawEntries)
+	if err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Remove all existing map entries
+	if deleteExisting {
+		for k := range s.entities {
+			delete(s.entities, k)
+		}
+	}
+
+	errList := make([]error, 0)
+	// Set new values
+	for k, v := range rawEntries {
+		entity := &Entity{}
+		if err := json.Unmarshal(v, entity); err != nil {
+			errList = append(errList, err)
+		} else {
+			s.entities[k] = *entity
+		}
+	}
+
+	if !ignoreErrors && len(errList) > 0 {
+		return errors.Join(errList...)
+	}
+
+	// update cache
+	b, err := json.Marshal(s.entities)
+	if err != nil {
+		return err
+	}
+	s.cache = b
+	return nil
 }
 
 func (s *EntityStore) Set(key string, entity Entity) error {

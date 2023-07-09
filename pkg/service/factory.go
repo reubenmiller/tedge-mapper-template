@@ -325,22 +325,49 @@ func NewMetaData(defaults ...MetaOption) map[string]any {
 	return meta
 }
 
-func NewDefaultService(broker string, clientID string, cleanSession bool, httpEndpoint string, routeDirs []string, maxdepth int, postDelay time.Duration, debug bool, dryRun bool, metaOptions []MetaOption, libPaths []string, useColor bool) (*Service, error) {
-	app, err := NewService(broker, clientID, cleanSession, httpEndpoint, dryRun)
+type DefaultServiceOptions struct {
+	Broker                     string
+	ClientID                   string
+	CleanSession               bool
+	HTTPEndpoint               string
+	RouteDirs                  []string
+	MaxRouteDepth              int
+	PostMessageDelay           time.Duration
+	Debug                      bool
+	DryRun                     bool
+	MetaOptions                []MetaOption
+	LibraryPaths               []string
+	UseColor                   bool
+	EntityFile                 string
+	EnableRegistrationListener bool
+}
+
+func NewDefaultService(opts *DefaultServiceOptions) (*Service, error) {
+	app, err := NewService(opts.Broker, opts.ClientID, opts.CleanSession, opts.HTTPEndpoint, opts.DryRun)
 	if err != nil {
 		return nil, err
 	}
 
-	meta := NewMetaData(metaOptions...)
+	meta := NewMetaData(opts.MetaOptions...)
+
+	if opts.EntityFile != "" {
+		if _, err := os.Stat(opts.EntityFile); err == nil {
+			entityFileContents, readErr := os.ReadFile(opts.EntityFile)
+			if readErr != nil {
+				return nil, readErr
+			}
+			slog.Info("Loading initial entity definitions from file.", "file", opts.EntityFile, "contents", string(entityFileContents))
+			app.EntityStore.SetFromJSON(entityFileContents, true, true)
+		}
+	}
 
 	// Handle entity registration independently
-	registrationClient := mqtt.NewClient(mqtt.NewClientOptions().SetClientID(clientID + "_regListener").AddBroker(broker).SetCleanSession(cleanSession))
+	registrationClient := mqtt.NewClient(mqtt.NewClientOptions().SetClientID(opts.ClientID + "_regListener").AddBroker(opts.Broker).SetCleanSession(opts.CleanSession))
 	if token := registrationClient.Connect(); !token.Wait() && token.Error() != nil {
 		return nil, token.Error()
 	}
 
-	enableRegistration := true
-	if enableRegistration {
+	if opts.EnableRegistrationListener {
 		registerCallback := func(c mqtt.Client, m mqtt.Message) {
 			slog.Info("Received registration message.", "topic", m.Topic(), "message", m.Payload())
 			nonEmptyParts := make([]string, 0)
@@ -384,7 +411,7 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, httpEn
 		}
 	}
 
-	routes := app.ScanMappingFiles(routeDirs)
+	routes := app.ScanMappingFiles(opts.RouteDirs)
 	for _, route := range routes {
 		if !route.Skip {
 			slog.Info("Registering route.", "name", route.Name, "topics", route.DisplayTopics())
@@ -396,13 +423,13 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, httpEn
 					app.APIClient,
 					route,
 					app.GetVariables,
-					maxdepth,
-					postDelay,
+					opts.MaxRouteDepth,
+					opts.PostMessageDelay,
 					jsonnet.WithMetaData(meta),
-					jsonnet.WithDebug(debug),
-					jsonnet.WithDryRun(dryRun),
-					jsonnet.WithLibraryPaths(libPaths...),
-					jsonnet.WithColorStackTrace(useColor),
+					jsonnet.WithDebug(opts.Debug),
+					jsonnet.WithDryRun(opts.DryRun),
+					jsonnet.WithLibraryPaths(opts.LibraryPaths...),
+					jsonnet.WithColorStackTrace(opts.UseColor),
 				),
 			)
 			if err != nil {

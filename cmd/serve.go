@@ -45,15 +45,32 @@ Examples:
 		delay, _ := cmd.Root().PersistentFlags().GetDuration("delay")
 		dryRun, _ := cmd.Root().PersistentFlags().GetBool("dry")
 		deviceID, _ := cmd.Root().PersistentFlags().GetString("device-id")
+		entityFile, _ := cmd.Flags().GetString("entityfile")
 
 		useColor := true
 		if !isatty.IsTerminal(os.Stdout.Fd()) && !isatty.IsCygwinTerminal(os.Stdout.Fd()) {
 			useColor = false
 		}
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDirs, maxDepth, delay, debug, dryRun, []service.MetaOption{
-			service.WithMetaDefaultDeviceID(deviceID),
-		}, libPaths, useColor)
+		app, err := service.NewDefaultService(
+			&service.DefaultServiceOptions{
+				Broker:                     ArgBroker,
+				ClientID:                   ArgClientID,
+				CleanSession:               ArgCleanSession,
+				RouteDirs:                  routeDirs,
+				MaxRouteDepth:              maxDepth,
+				PostMessageDelay:           delay,
+				Debug:                      debug,
+				DryRun:                     dryRun,
+				LibraryPaths:               libPaths,
+				UseColor:                   useColor,
+				EntityFile:                 entityFile,
+				EnableRegistrationListener: true,
+				MetaOptions: []service.MetaOption{
+					service.WithMetaDefaultDeviceID(deviceID),
+				},
+			},
+		)
 		if err != nil {
 			return err
 		}
@@ -77,4 +94,5 @@ func init() {
 	serveCmd.Flags().StringVar(&ArgBroker, "host", "localhost:1883", "Broker endpoint (can included port number)")
 	serveCmd.Flags().BoolVar(&ArgCleanSession, "clean", true, "Clean session")
 	serveCmd.Flags().StringVarP(&ArgClientID, "clientid", "i", "tedge-mapper-template", "MQTT client id")
+	serveCmd.Flags().String("entityfile", "", "Load initial entity definitions from a json file")
 }

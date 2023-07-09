@@ -46,6 +46,7 @@ Examples:
 		maxDepth, _ := cmd.Root().PersistentFlags().GetInt("maxdepth")
 		delay, _ := cmd.Root().PersistentFlags().GetDuration("delay")
 		deviceID, _ := cmd.Root().PersistentFlags().GetString("device-id")
+		entityFile, _ := cmd.Flags().GetString("entityfile")
 		// dryRun, _ := cmd.Root().PersistentFlags().GetBool("dry")
 		// Force dry run
 		dryRun := true
@@ -70,9 +71,25 @@ Examples:
 			message = string(b)
 		}
 
-		app, err := service.NewDefaultService(ArgBroker, ArgClientID, ArgCleanSession, "", routeDirs, maxDepth, delay, debug, true, []service.MetaOption{
-			service.WithMetaDefaultDeviceID(deviceID),
-		}, libPaths, useColor)
+		serviceOptions := &service.DefaultServiceOptions{
+			Broker:                     ArgBroker,
+			ClientID:                   ArgClientID,
+			CleanSession:               ArgCleanSession,
+			RouteDirs:                  routeDirs,
+			MaxRouteDepth:              maxDepth,
+			PostMessageDelay:           delay,
+			Debug:                      debug,
+			DryRun:                     true,
+			LibraryPaths:               libPaths,
+			UseColor:                   useColor,
+			EntityFile:                 entityFile,
+			EnableRegistrationListener: false,
+			MetaOptions: []service.MetaOption{
+				service.WithMetaDefaultDeviceID(deviceID),
+			},
+		}
+
+		app, err := service.NewDefaultService(serviceOptions)
 		if err != nil {
 			return err
 		}
@@ -122,7 +139,7 @@ Examples:
 
 					foundRoute = true
 					// cmd.Printf("Route:\t%s\n", route.Name)
-					handler := service.NewStreamFactory(nil, nil, route, nil, maxDepth, 0,
+					handler := service.NewStreamFactory(nil, nil, route, app.GetVariables, maxDepth, 0,
 						jsonnet.WithMetaData(meta),
 						jsonnet.WithDebug(debug),
 						jsonnet.WithDryRun(dryRun),
@@ -167,4 +184,5 @@ func init() {
 	executeCmd.Flags().StringP("message", "m", "", "Input message. Accepts a string or a path to a file")
 	executeCmd.Flags().StringP("file", "f", "", "Template file")
 	executeCmd.Flags().Bool("compact", false, "Print output message in compact format (not pretty printed)")
+	executeCmd.Flags().String("entityfile", "", "Load initial entity definitions from a json file")
 }
