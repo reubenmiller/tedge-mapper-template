@@ -22,10 +22,14 @@
 
             # The topic_id is the internal identifier used to lookup registered entities/components
             # It should not include the certificate's common name (unless this is part of the users own manual topic structure)
+
+            # Normalize the topic in case people use ':' instead of "/" (namely in referencing parents)
+            local normalized_topic = std.strReplace(topic, ":", "/");
+
             local topic_id = 
                 std.join("/", [
                     part
-                    for part in std.split(topic, "/")[0:5]
+                    for part in std.split(normalized_topic, "/")[0:5]
                     if !std.isEmpty(part)
                 ])
             ;
@@ -47,7 +51,7 @@
 
             local defaultValues = {
                 "@id": derived_target,
-                "contents": _proposal3.getEntityType(topic, meta=meta, entities=entities),
+                "contents": _proposal3.getEntityType(normalized_topic, meta=meta, entities=entities),
             };
 
             defaultValues + std.get(entities, topic_id, {})
