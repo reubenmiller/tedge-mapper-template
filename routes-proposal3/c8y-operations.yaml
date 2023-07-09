@@ -62,6 +62,7 @@ routes:
             id: ctx.id,
             command: message.payload.c8y_Command.text,
           },
+          retain: true,
           context: false,
       }
 
@@ -89,6 +90,7 @@ routes:
           id: ctx.id,
           status: 'pending',
         },
+        retain: true,
         context: false,
       }
 
@@ -120,6 +122,7 @@ routes:
           type: configType,
           url: 'http://0.0.0.0:8000/tedge/file-transfer/%s/%s/%s' % [ctx.serial, 'config_snapshot', configType],
         },
+        retain: true,
         context: false,
       }
 
@@ -147,6 +150,7 @@ routes:
           type: std.get(fragment, 'type', ''),
           url: std.get(fragment, 'url', ''),
         },
+        retain: true,
         context: false,
       }
 
@@ -195,6 +199,7 @@ routes:
             for type in types
           ],
         },
+        retain: true,
         context: false,
       }
   
@@ -228,5 +233,6 @@ routes:
           version: params.version,
           sha256: std.get(params, 'sha256', null),
         },
+        retain: true,
         context: false,
       }
