@@ -1,0 +1,108 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/reubenmiller/commander/feat/handle-nested-files/schema.json
+
+config:
+  env:
+    C8Y_SETTINGS_DEFAULTS_CACHE: true
+
+tests:
+  update root fragment:
+    command: |
+      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/main///data/' -m '{"status":"unknown","alias":"My device"}' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-inventory (te/+/+/+/+/data/+)
+
+        Input Message
+          topic:    te/device/main///data/
+
+        Output Message (mqtt)
+          topic:    c8y/inventory/managedObjects/update/sim_tedge01
+
+            {
+              "alias": "My device",
+              "status": "unknown"
+            }
+
+  publish inventory update for main device:
+    command: |
+      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/main///data/os_information' -m '{"family":"Debian", "codename":"bullseye", "version": "11"}' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-inventory (te/+/+/+/+/data/+)
+
+        Input Message
+          topic:    te/device/main///data/os_information
+
+        Output Message (mqtt)
+          topic:    c8y/inventory/managedObjects/update/sim_tedge01
+
+            {
+              "os_information": {
+                "codename": "bullseye",
+                "family": "Debian",
+                "version": "11"
+              }
+            }
+
+  publish inventory update for child device:
+    command: |
+      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/child01///data/os_information' -m '{"family":"Debian", "codename":"bullseye", "version": "11"}' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-inventory (te/+/+/+/+/data/+)
+
+        Input Message
+          topic:    te/device/child01///data/os_information
+
+        Output Message (mqtt)
+          topic:    c8y/inventory/managedObjects/update/sim_tedge01:device:child01
+
+            {
+              "os_information": {
+                "codename": "bullseye",
+                "family": "Debian",
+                "version": "11"
+              }
+            }
+
+  publish inventory update for service of main device:
+    command: |
+      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/main/service/nodered/data/os_information' -m '{"family":"Debian", "codename":"bullseye", "version": "11"}' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-inventory (te/+/+/+/+/data/+)
+
+        Input Message
+          topic:    te/device/main/service/nodered/data/os_information
+
+        Output Message (mqtt)
+          topic:    c8y/inventory/managedObjects/update/sim_tedge01:device:main:service:nodered
+
+            {
+              "os_information": {
+                "codename": "bullseye",
+                "family": "Debian",
+                "version": "11"
+              }
+            }
+
+  publish inventory update for service of child device:
+    command: |
+      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/child01/service/nodered/data/os_information' -m '{"family":"Debian", "codename":"bullseye", "version": "11"}' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-inventory (te/+/+/+/+/data/+)
+
+        Input Message
+          topic:    te/device/child01/service/nodered/data/os_information
+
+        Output Message (mqtt)
+          topic:    c8y/inventory/managedObjects/update/sim_tedge01:device:child01:service:nodered
+
+            {
+              "os_information": {
+                "codename": "bullseye",
+                "family": "Debian",
+                "version": "11"
+              }
+            }
