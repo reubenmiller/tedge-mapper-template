@@ -334,15 +334,17 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, httpEn
 	meta := NewMetaData(metaOptions...)
 
 	// Handle entity registration independently
+	registrationClient := mqtt.NewClient(mqtt.NewClientOptions().SetClientID(clientID + "_regListener").AddBroker(broker).SetCleanSession(cleanSession))
+	if token := registrationClient.Connect(); !token.Wait() && token.Error() != nil {
+		return nil, token.Error()
+	}
+
 	enableRegistration := true
 	if enableRegistration {
-		if err := app.Register([]string{
-			"te/+/+",
-			"te/+/+/+/+",
-		}, 1, func(topic, message_in string) (message_out *streamer.OutputMessage, err error) {
-			slog.Info("Received registration message.", "topic", topic, "message", message_in)
+		registerCallback := func(c mqtt.Client, m mqtt.Message) {
+			slog.Info("Received registration message.", "topic", m.Topic(), "message", m.Payload())
 			nonEmptyParts := make([]string, 0)
-			for _, part := range strings.Split(topic, "/") {
+			for _, part := range strings.Split(m.Topic(), "/") {
 				if part != "" {
 					nonEmptyParts = append(nonEmptyParts, part)
 				}
@@ -350,30 +352,35 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, httpEn
 			name := strings.Join(nonEmptyParts, "/")
 
 			entity := Entity{}
-			if err := json.Unmarshal([]byte(message_in), &entity); err != nil {
-				return nil, err
+			if err := json.Unmarshal(m.Payload(), &entity); err != nil {
+				slog.Warn("Invalid registration payload.", err)
+				return
 			}
 
-			switch strings.Count(topic, "/") {
+			switch strings.Count(m.Topic(), "/") {
 			case 2:
-				slog.Info("Device registration", "topic", topic, "name", name)
+				slog.Info("Device registration", "topic", m.Topic(), "name", name)
 			case 4:
-				slog.Info("Application registration", "topic", topic, "name", name)
+				slog.Info("Application registration", "topic", m.Topic(), "name", name)
 			default:
-				return nil, fmt.Errorf("unknown registration error")
+				slog.Warn("Unknown registration error")
+				return
 			}
 
 			if err := app.EntityStore.Set(name, entity); err != nil {
 				slog.Warn("Could not register entity", "error", err)
-				return nil, err
+				return
 			}
 
 			slog.Info("Registered entity successfully", "entity", slog.StringValue(fmt.Sprintf("%#v", entity)))
-			return &streamer.OutputMessage{
-				Skip: true,
-			}, nil
-		}); err != nil {
-			slog.Error("registration failed", err)
+		}
+
+		regTopics := map[string]byte{
+			"te/+/+":     1,
+			"te/+/+/+/+": 1,
+		}
+		if token := registrationClient.SubscribeMultiple(regTopics, registerCallback); token.Wait() && token.Error() != nil {
+			return nil, fmt.Errorf("error subscribing to topic '%v': %v", regTopics, token.Error())
 		}
 	}
 
