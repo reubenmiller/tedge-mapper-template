@@ -1,0 +1,133 @@
+# yaml-language-server: $schema=../spec/schema.json
+---
+# Legacy tedge telemetry mapper to offer provide a translation layer between the legacy and new formats
+routes:
+- name: legacy-tedge-measurements-main
+  topics:
+    - tedge/measurements
+  description: |
+    Legacy tedge measurements for the main device
+  template:
+    type: jsonnet
+    value: |
+      {
+        topic: 'te/device/main///m/ThinEdgeMeasurement',
+        context: false,
+        message: message,
+      }
+
+- name: legacy-tedge-measurements-child
+  topics:
+    - tedge/measurements/+
+  description: |
+    Legacy tedge measurements for a child device
+  template:
+    type: jsonnet
+    value: |
+      local target = std.splitLimitR(topic, "/", 1)[1];
+      {
+        topic: 'te/device/%s///m/ThinEdgeMeasurement' % [target],
+        context: false,
+        message: message,
+      }
+
+- name: legacy-tedge-events-main
+  topics:
+    - tedge/events/+
+  description: |
+    Legacy tedge events for the main device
+  template:
+    type: jsonnet
+    value: |
+      local type = std.splitLimitR(topic, "/", 1)[1];
+      {
+        topic: 'te/device/main///e/%s' % [type],
+        context: false,
+        message: message,
+      }
+
+- name: legacy-tedge-events-child
+  topics:
+    - tedge/events/+/+
+  description: |
+    Legacy tedge events for a child device
+  template:
+    type: jsonnet
+    value: |
+      local parts = std.splitLimitR(topic, "/", 2);
+      local type = parts[1];
+      local target = parts[2];
+      {
+        topic: 'te/device/%s///e/%s' % [target, type],
+        context: false,
+        message: message,
+      }
+
+- name: legacy-tedge-alarms-main
+  topics:
+    - tedge/alarms/+/+
+  description: |
+    Legacy tedge alarms for the main device
+  template:
+    type: jsonnet
+    value: |
+      local parts = std.splitLimitR(topic, "/", 2);
+      local severity = parts[1];
+      local type = parts[2];
+      {
+        topic: 'te/device/main///a/%s' % [type],
+        context: false,
+        message: {severity: severity} + message,
+      }
+
+- name: legacy-tedge-alarms-child
+  topics:
+    - tedge/alarms/+/+/+
+  description: |
+    Legacy tedge alarms for a child device
+  template:
+    type: jsonnet
+    value: |
+      local parts = std.splitLimitR(topic, "/", 3);
+      local severity = parts[1];
+      local type = parts[2];
+      local target = parts[3];
+      {
+        topic: 'te/device/%s///a/%s' % [target, type],
+        context: false,
+        message: {severity: severity} + message,
+      }
+
+- name: legacy-tedge-health-main
+  topics:
+    - tedge/health/+
+  description: |
+    Legacy tedge health for the main device
+  template:
+    type: jsonnet
+    value: |
+      local service = std.splitLimitR(topic, "/", 1)[1];
+      {
+        topic: 'te/device/main/service/%s/data/' % [service],
+        context: false,
+        retain: true,
+        message: message,
+      }
+
+- name: legacy-tedge-health-child
+  topics:
+    - tedge/health/+/+
+  description: |
+    Legacy tedge health for a child device
+  template:
+    type: jsonnet
+    value: |
+      local parts = std.splitLimitR(topic, "/", 2);
+      local service = parts[1];
+      local child = parts[2];
+      {
+        topic: 'te/device/%s/service/%s/data/' % [child, service],
+        context: false,
+        retain: true,
+        message: message,
+      }

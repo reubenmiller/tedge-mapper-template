@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../spec/schema.json
+# yaml-language-server: $schema=../spec/schema.json
 ---
 routes:
 - name: c8y-measurements
@@ -84,10 +84,16 @@ routes:
       local tedge = import 'tedge.libsonnet';
       local target = tedge.proposal3.getTarget(topic, meta, entities=variables);
       local serial = target["@id"];
+      local type = tedge.getType(topic);
       {
         topic: 'c8y/inventory/managedObjects/update/%s' % serial,
         context: false,
-        message: {
-          [tedge.getType(topic)]: message,
-        },
+        message:
+          if std.isEmpty(type) then
+            message
+          else
+            {
+              [type]: message,
+            }
+        ,
       }

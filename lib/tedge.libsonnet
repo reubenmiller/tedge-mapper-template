@@ -77,6 +77,32 @@
                 },
             }
         ,
+
+        convertToTopic(external_identity='', meta={}, entities={}, root_namespace="te")::
+            # Convert the cloud target name to a topic name
+            #
+            # Examples:
+            #   <CN> => te/device/main//
+            #   <CN>:device:main:service:tedge-agent => te/device/main/service/tedge-agent
+            #   <CN>:my:full:custom:name => te/my/full/custom/name
+
+            local topic = 
+                local tmp = std.join("/", [
+                    part
+                    for part in ["te"] + std.split(external_identity, ":")[1:5]
+                    if !std.isEmpty(part)
+                ]);
+                if external_identity == std.get(meta, "device_id") then
+                    "te/device/main//"
+                else
+                    local segment_count = std.length(std.split(tmp, "/"));
+                    if segment_count < 4 then
+                        tmp + std.repeat("/", 5 - segment_count)
+                    else
+                        tmp
+            ;
+            topic
+        ,
     },
 
     # Get the topic prefix, e.g. tedge or tedge/child01

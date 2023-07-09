@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../spec/schema.json
+# yaml-language-server: $schema=../spec/schema.json
 ---
 routes:
 - name: c8y-entity-registration
