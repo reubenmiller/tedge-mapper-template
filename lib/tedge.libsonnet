@@ -54,7 +54,16 @@
                 "contents": _proposal3.getEntityType(normalized_topic, meta=meta, entities=entities),
             };
 
-            defaultValues + std.get(entities, topic_id, {})
+            defaultValues + _proposal3.removeEmptyValues(std.get(entities, topic_id, {}))
+        ,
+
+        removeEmptyValues(o)::
+            # Remove any fields which are empty string values
+            {
+                [item.key]: item.value
+                for item in std.objectKeysValues(o)
+                if (std.isString(item.value) && !std.isEmpty(item.value)) || !std.isString(item.value)
+            }
         ,
 
         getEntityType(topic="", meta={}, entities={})::

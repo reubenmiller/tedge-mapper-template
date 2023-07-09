@@ -127,3 +127,40 @@ tests:
         Output Message (mqtt)
           topic:    c8y/s/us/sim_tedge01
         101,"sim_tedge01:customer1:sandbox01","sandbox 01","c8y_MQTTChildDevice"
+
+  register a device which has an empty @id in the entity store:
+    command: |
+      go run main.go routes check --entityfile ./tests/proposal3/entities.json --dir ./routes-proposal3 -t 'te/device/child03' -m '{
+        "@type": "child-device",
+        "displayName": "child03"
+      }' -s --device-id sim_tedge01
+      
+    stdout:
+      exactly: |
+        Route: c8y-registration (te/+/+, te/+/+/+/+)
+
+        Input Message
+          topic:    te/device/child03
+
+        Output Message (mqtt)
+          topic:    c8y/s/us/sim_tedge01
+        101,"sim_tedge01:device:child03","child03","c8y_MQTTChildDevice"
+
+  register a device which has an empty @id in the registration message:
+    command: |
+      go run main.go routes check --entityfile ./tests/proposal3/entities.json --dir ./routes-proposal3 -t 'te/device/child03' -m '{
+        "@type": "child-device",
+        "@id": "",
+        "displayName": "child03"
+      }' -s --device-id sim_tedge01
+      
+    stdout:
+      exactly: |
+        Route: c8y-registration (te/+/+, te/+/+/+/+)
+
+        Input Message
+          topic:    te/device/child03
+
+        Output Message (mqtt)
+          topic:    c8y/s/us/sim_tedge01
+        101,"sim_tedge01:device:child03","child03","c8y_MQTTChildDevice"

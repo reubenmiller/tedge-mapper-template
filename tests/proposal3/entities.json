@@ -23,5 +23,11 @@
         "@id": "te:device:gateway01",
         "displayName": "gateway01",
         "type": "SmartHomeHub"
+    },
+    "te/device/child03": {
+        "@type": "child-device",
+        "@id": "",
+        "displayName": "child03",
+        "type": "SmartHomeHub"
     }
 }
