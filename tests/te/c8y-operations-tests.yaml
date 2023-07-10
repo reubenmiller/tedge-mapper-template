@@ -7,7 +7,7 @@ config:
 tests:
   Receive operation for the main device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'c8y/devicecontrol/notifications' -m '{
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
         "c8y_Command":{
           "text":"ls -l"
         },
@@ -66,7 +66,7 @@ tests:
 
   Receive operation for a service on the main device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'c8y/devicecontrol/notifications' -m '{
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
         "c8y_Command":{
           "text":"ls -l"
         },
@@ -126,7 +126,7 @@ tests:
 
   Receive operation for the child device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'c8y/devicecontrol/notifications' -m '{
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
         "c8y_Command":{
           "text":"ls -l"
         },
@@ -185,7 +185,7 @@ tests:
 
   Receive operation for a service on a child device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'c8y/devicecontrol/notifications' -m '{
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
         "c8y_Command":{
           "text":"ls -l"
         },
@@ -247,7 +247,7 @@ tests:
   #
   Map operation c8y_Restart:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'c8y/devicecontrol/notifications' -m '{
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
         "c8y_Restart":{},
         "externalSource":{
           "externalId":"sim_tedge01"
@@ -302,7 +302,7 @@ tests:
 
   Map operation c8y_UploadConfigFile:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'c8y/devicecontrol/notifications' -m '{
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
         "c8y_UploadConfigFile": {
           "type": "c8y-bridge.conf"
         },
@@ -363,7 +363,7 @@ tests:
 
   Map operation c8y_DownloadConfigFile:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'c8y/devicecontrol/notifications' -m '{
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
         "c8y_DownloadConfigFile": {
           "type": "config1",
           "url": "https://example.c8y.io/inventory/binaries/98765"
@@ -427,7 +427,7 @@ tests:
 
   Map operation c8y_SoftwareUpdate:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'c8y/devicecontrol/notifications' -m '{
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
         "c8y_SoftwareUpdate": [
           {
             "action": "install",
@@ -510,7 +510,7 @@ tests:
 
   Map operation c8y_Firmware:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'c8y/devicecontrol/notifications' -m '{
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
         "c8y_Firmware": {
           "name": "ubuntu",
           "url": "https://dummy.url/firmware.zip",

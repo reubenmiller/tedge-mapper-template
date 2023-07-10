@@ -7,7 +7,7 @@ config:
 tests:
   publish alarms for main device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/main///a/flow_lo' -m '{"text":"Low flow", "severity": "WARNING", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/main///a/flow_lo' -m '{"text":"Low flow", "severity": "WARNING", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-alarms (te/+/+/+/+/a/+)
@@ -31,7 +31,7 @@ tests:
 
   publish alarms for child device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/child01///a/flow_lo' -m '{"text":"Low flow", "severity": "WARNING", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/child01///a/flow_lo' -m '{"text":"Low flow", "severity": "WARNING", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-alarms (te/+/+/+/+/a/+)
@@ -55,7 +55,7 @@ tests:
 
   publish alarms service of main device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/main/service/nodered/a/flow_lo' -m '{"text":"Low flow", "severity": "WARNING", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/main/service/nodered/a/flow_lo' -m '{"text":"Low flow", "severity": "WARNING", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-alarms (te/+/+/+/+/a/+)
@@ -79,7 +79,7 @@ tests:
 
   publish alarms service of child device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/child01/service/nodered/a/flow_lo' -m '{"text":"Low flow", "severity": "WARNING", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/child01/service/nodered/a/flow_lo' -m '{"text":"Low flow", "severity": "WARNING", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-alarms (te/+/+/+/+/a/+)

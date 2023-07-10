@@ -7,7 +7,7 @@ config:
 tests:
   update root fragment:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/main///data/' -m '{"status":"unknown","alias":"My device"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/main///data/' -m '{"status":"unknown","alias":"My device"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-inventory (te/+/+/+/+/data/+)
@@ -25,7 +25,7 @@ tests:
 
   publish inventory update for main device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/main///data/os_information' -m '{"family":"Debian", "codename":"bullseye", "version": "11"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/main///data/os_information' -m '{"family":"Debian", "codename":"bullseye", "version": "11"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-inventory (te/+/+/+/+/data/+)
@@ -46,7 +46,7 @@ tests:
 
   publish inventory update for child device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/child01///data/os_information' -m '{"family":"Debian", "codename":"bullseye", "version": "11"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/child01///data/os_information' -m '{"family":"Debian", "codename":"bullseye", "version": "11"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-inventory (te/+/+/+/+/data/+)
@@ -67,7 +67,7 @@ tests:
 
   publish inventory update for service of main device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/main/service/nodered/data/os_information' -m '{"family":"Debian", "codename":"bullseye", "version": "11"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/main/service/nodered/data/os_information' -m '{"family":"Debian", "codename":"bullseye", "version": "11"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-inventory (te/+/+/+/+/data/+)
@@ -88,7 +88,7 @@ tests:
 
   publish inventory update for service of child device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/child01/service/nodered/data/os_information' -m '{"family":"Debian", "codename":"bullseye", "version": "11"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/child01/service/nodered/data/os_information' -m '{"family":"Debian", "codename":"bullseye", "version": "11"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-inventory (te/+/+/+/+/data/+)

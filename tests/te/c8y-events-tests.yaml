@@ -7,7 +7,7 @@ config:
 tests:
   publish events for main device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/main///e/info' -m '{"text":"foo bar", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/main///e/info' -m '{"text":"foo bar", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-events (te/+/+/+/+/e/+)
@@ -30,7 +30,7 @@ tests:
 
   publish events for child device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/child01///e/info' -m '{"text":"foo bar", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/child01///e/info' -m '{"text":"foo bar", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-events (te/+/+/+/+/e/+)
@@ -53,7 +53,7 @@ tests:
 
   publish events service of main device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/main/service/nodered/e/info' -m '{"text":"foo bar", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/main/service/nodered/e/info' -m '{"text":"foo bar", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-events (te/+/+/+/+/e/+)
@@ -76,7 +76,7 @@ tests:
 
   publish events service of child device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/child01/service/nodered/e/info' -m '{"text":"foo bar", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./routes-te -t 'te/device/child01/service/nodered/e/info' -m '{"text":"foo bar", "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-events (te/+/+/+/+/e/+)

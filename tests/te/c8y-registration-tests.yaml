@@ -10,7 +10,7 @@ tests:
   #
   register nested child device without a pre-registered parent with slashes:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/nested_child10' -m '{
+      go run main.go routes check --dir ./routes-te -t 'te/device/nested_child10' -m '{
         "@type": "child-device",
         "@parent": "te/device/nested_gateway",
         "displayName": "nested_child10"
@@ -28,7 +28,7 @@ tests:
   
   register nested child device without a pre-registered parent id with colons:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/nested_child10' -m '{
+      go run main.go routes check --dir ./routes-te -t 'te/device/nested_child10' -m '{
         "@type": "child-device",
         "@parent": "te:device:nested_gateway",
         "displayName": "nested_child10"
@@ -46,7 +46,7 @@ tests:
 
   register nested child device with a pre-registered parent which has an explicit id:
     command: |
-      go run main.go routes check --entityfile ./tests/proposal3/entities.json --dir ./routes-proposal3 -t 'te/device/sensor01' -m '{
+      go run main.go routes check --entityfile ./tests/te/entities.json --dir ./routes-te -t 'te/device/sensor01' -m '{
         "@type": "child-device",
         "@parent": "te/device/gateway01",
         "type": "matter",
@@ -68,7 +68,7 @@ tests:
   #
   register a child device with an explicit id:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/device/sensor01' -m '{
+      go run main.go routes check --dir ./routes-te -t 'te/device/sensor01' -m '{
         "@type": "child-device",
         "type": "matter",
         "displayName": "Custom sensor01"
@@ -89,7 +89,7 @@ tests:
   #
   register a service of a child device:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/component/sensor01' -m '{
+      go run main.go routes check --dir ./routes-te -t 'te/component/sensor01' -m '{
         "@type": "service",
         "type": "matter",
         "displayName": "Custom sensor01"
@@ -112,7 +112,7 @@ tests:
   #
   register a custom child device without an explicit parent:
     command: |
-      go run main.go routes check --dir ./routes-proposal3 -t 'te/customer1/sandbox01' -m '{
+      go run main.go routes check --dir ./routes-te -t 'te/customer1/sandbox01' -m '{
         "@type": "child-device",
         "displayName": "sandbox 01"
       }' -s --device-id sim_tedge01
@@ -130,7 +130,7 @@ tests:
 
   register a device which has an empty @id in the entity store:
     command: |
-      go run main.go routes check --entityfile ./tests/proposal3/entities.json --dir ./routes-proposal3 -t 'te/device/child03' -m '{
+      go run main.go routes check --entityfile ./tests/te/entities.json --dir ./routes-te -t 'te/device/child03' -m '{
         "@type": "child-device",
         "displayName": "child03"
       }' -s --device-id sim_tedge01
@@ -148,7 +148,7 @@ tests:
 
   register a device which has an empty @id in the registration message:
     command: |
-      go run main.go routes check --entityfile ./tests/proposal3/entities.json --dir ./routes-proposal3 -t 'te/device/child03' -m '{
+      go run main.go routes check --entityfile ./tests/te/entities.json --dir ./routes-te -t 'te/device/child03' -m '{
         "@type": "child-device",
         "@id": "",
         "displayName": "child03"

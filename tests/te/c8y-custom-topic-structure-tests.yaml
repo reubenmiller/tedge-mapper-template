@@ -7,7 +7,7 @@ config:
 tests:
   publish measurements for main device:
     command: |
-      go run main.go routes check --entityfile ./tests/proposal3/entities.json --dir ./routes-proposal3 -t 'te/flowserve/AF012345///m/runtime' -m '{"operating_hours":10, "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
+      go run main.go routes check --entityfile ./tests/te/entities.json --dir ./routes-te -t 'te/flowserve/AF012345///m/runtime' -m '{"operating_hours":10, "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
     stdout:
       exactly: |
         Route: c8y-measurements (te/+/+/+/+/m/+)
