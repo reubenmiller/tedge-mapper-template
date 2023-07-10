@@ -11,10 +11,10 @@ create_child() {
 
     # TODO: Handle the registration of child devices automatically (e.g. intercept the messages sent by the agent and add prefixes)
     # Manually register the child devices for the first time
-    tedge mqtt pub 'c8y/s/us' "101,${DEVICE_ID}_${CHILD},${CHILD},c8y_MQTTChildDevice"
+    tedge mqtt pub 'c8y/s/us' "101,${DEVICE_ID}:device:${CHILD},${CHILD},c8y_MQTTChildDevice"
     sleep 1
 
-    CHILD_DIR="/etc/tedge/operations/c8y/${DEVICE_ID}_${CHILD}"
+    CHILD_DIR="/etc/tedge/operations/c8y/${DEVICE_ID}:device:${CHILD}"
     sudo -u tedge mkdir -p "$CHILD_DIR"
     sudo -u tedge touch "$CHILD_DIR/c8y_SoftwareUpdate"
 
@@ -26,9 +26,10 @@ create_child() {
     sudo -u tedge touch "$CHILD_DIR/c8y_LogfileRequest"    
 }
 
-sleep 1
-create_child child01
-create_child child02
+# Skip child device creation as the manual registration topics can now be used
+#sleep 1
+#create_child child01
+#create_child child02
 
 echo "Stopping tedge-mapper-c8y"
 sudo systemctl disable tedge-mapper-c8y
