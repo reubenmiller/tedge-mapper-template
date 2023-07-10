@@ -13,7 +13,7 @@ routes:
       local units = import 'units.json';
       local type = std.splitLimitR(topic, "/", 1)[1];
 
-      local target = tedge.proposal3.getTarget(topic, meta, entities=variables);
+      local target = tedge.te.getTarget(topic, meta, entities=variables);
       local serial = target["@id"];
 
       local measurements = tedge.measurements.unflatten(
@@ -42,7 +42,7 @@ routes:
       {
         topic: 'c8y/event/events/create',
         context: false,
-        message: tedge.proposal3.getExternalDeviceSource(topic, meta, variables) + {
+        message: tedge.te.getExternalDeviceSource(topic, meta, variables) + {
           type: type,
           text: message.text,
           time: std.native('Now')(),
@@ -64,7 +64,7 @@ routes:
       {
         topic: 'c8y/alarm/alarms/create',
         context: false,
-        message: tedge.proposal3.getExternalDeviceSource(topic, meta, variables) + {
+        message: tedge.te.getExternalDeviceSource(topic, meta, variables) + {
           type: type,
           text: message.text,
           severity: 'CRITICAL', // default
@@ -82,7 +82,7 @@ routes:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
-      local target = tedge.proposal3.getTarget(topic, meta, entities=variables);
+      local target = tedge.te.getTarget(topic, meta, entities=variables);
       local serial = target["@id"];
       local type = tedge.getType(topic);
       {

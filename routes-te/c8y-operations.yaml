@@ -48,7 +48,7 @@ routes:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
-      local target = tedge.proposal3.convertToTopic(ctx.serial, meta=meta);
+      local target = tedge.te.convertToTopic(ctx.serial, meta=meta);
       {
           topic: std.join(
             "/",
@@ -76,7 +76,7 @@ routes:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
-      local target = tedge.proposal3.convertToTopic(ctx.serial, meta=meta);
+      local target = tedge.te.convertToTopic(ctx.serial, meta=meta);
       {
         topic: std.join(
             "/",
@@ -104,7 +104,7 @@ routes:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
-      local target = tedge.proposal3.convertToTopic(ctx.serial, meta=meta);
+      local target = tedge.te.convertToTopic(ctx.serial, meta=meta);
       local fragment = std.get(message.payload, 'c8y_UploadConfigFile', {});
       local configType = std.get(fragment, 'type', '');
       {
@@ -133,7 +133,7 @@ routes:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
-      local target = tedge.proposal3.convertToTopic(ctx.serial, meta=meta);
+      local target = tedge.te.convertToTopic(ctx.serial, meta=meta);
       local fragment = std.get(message.payload, 'c8y_DownloadConfigFile', {});
       {
         topic: std.join(
@@ -164,7 +164,7 @@ routes:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
-      local target = tedge.proposal3.convertToTopic(ctx.serial, meta=meta);
+      local target = tedge.te.convertToTopic(ctx.serial, meta=meta);
       local defaultType = std.get(meta, 'software_plugin_default', 'apt');
       local types = std.set([
         std.get(item, 'softwareType', defaultType)
@@ -213,7 +213,7 @@ routes:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
-      local target = tedge.proposal3.convertToTopic(ctx.serial, meta=meta);
+      local target = tedge.te.convertToTopic(ctx.serial, meta=meta);
       local params = std.get(message.payload, ctx.opType, {});
 
       {

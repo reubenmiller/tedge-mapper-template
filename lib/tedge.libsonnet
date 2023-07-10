@@ -1,8 +1,8 @@
 {
     local _self = self,
 
-    proposal3:: {
-        local _proposal3 = self,
+    te:: {
+        local _te = self,
 
         getTarget(topic='', meta={}, entities={}, root_namespace="te")::
             # Get cloud target name from the topic name
@@ -51,10 +51,10 @@
 
             local defaultValues = {
                 "@id": derived_target,
-                "contents": _proposal3.getEntityType(normalized_topic, meta=meta, entities=entities),
+                "contents": _te.getEntityType(normalized_topic, meta=meta, entities=entities),
             };
 
-            defaultValues + _proposal3.removeEmptyValues(std.get(entities, topic_id, {}))
+            defaultValues + _te.removeEmptyValues(std.get(entities, topic_id, {}))
         ,
 
         removeEmptyValues(o)::
@@ -100,7 +100,7 @@
         ,
 
         getExternalDeviceSource(topic, meta={}, entities={})::
-            local target = _proposal3.getTarget(topic, meta=meta, entities=entities);
+            local target = _te.getTarget(topic, meta=meta, entities=entities);
             {
                 externalSource: {
                     externalId: target["@id"],
