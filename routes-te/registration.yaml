@@ -12,13 +12,13 @@ routes:
     value: |
       local tedge = import 'tedge.libsonnet';
       local target = tedge.te.getTarget(topic, meta, entities=variables);
-      local serial = target["@id"];
+      local serial = tedge.te.sanitizeId(target["@id"]);
       local registrationType = std.asciiLower(std.get(message, "@type", std.get(target, "entity")));
       local parent = tedge.te.getTarget(std.get(message, "@parent", ""), meta, entities=variables);
 
       local outTopic = 
         if !std.isEmpty(std.get(parent, "@id", "")) then
-          'c8y/s/us/%s' % parent["@id"]
+          'c8y/s/us/%s' % tedge.te.sanitizeId(parent["@id"])
         else
           'c8y/s/us'
       ;

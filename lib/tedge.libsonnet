@@ -57,6 +57,9 @@
             defaultValues + _te.removeEmptyValues(std.get(entities, topic_id, {}))
         ,
 
+        # Normalize the id value by replacing unsupported characters with :
+        sanitizeId(v):: std.strReplace(v, "/", ":"),
+
         removeEmptyValues(o)::
             # Remove any fields which are empty string values
             {
