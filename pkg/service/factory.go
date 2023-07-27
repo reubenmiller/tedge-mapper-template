@@ -384,15 +384,7 @@ func NewDefaultService(opts *DefaultServiceOptions) (*Service, error) {
 				return
 			}
 
-			switch strings.Count(m.Topic(), "/") {
-			case 2:
-				slog.Info("Device registration", "topic", m.Topic(), "name", name)
-			case 4:
-				slog.Info("Application registration", "topic", m.Topic(), "name", name)
-			default:
-				slog.Warn("Unknown registration error")
-				return
-			}
+			slog.Info("Registering entity", "topic", m.Topic(), "name", name)
 
 			if err := app.EntityStore.Set(name, entity); err != nil {
 				slog.Warn("Could not register entity", "error", err)
@@ -403,7 +395,9 @@ func NewDefaultService(opts *DefaultServiceOptions) (*Service, error) {
 		}
 
 		regTopics := map[string]byte{
+			"te/+":       1,
 			"te/+/+":     1,
+			"te/+/+/+":   1,
 			"te/+/+/+/+": 1,
 		}
 		if token := registrationClient.SubscribeMultiple(regTopics, registerCallback); token.Wait() && token.Error() != nil {
