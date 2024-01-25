@@ -1,23 +1,22 @@
 # yaml-language-server: $schema=../spec/schema.json
 ---
 routes:
-- name: c8y-measurements-create
+- name: c8y-measurements-bulk-text
   topics:
-    - tedge/measurements-bulk-text/+
-    - tedge/+/measurements-bulk-text/+
+    - te/+/+/+/+/m2/+
   description: |
     Create measurements with multiple values via a text key/value interface
 
     Examples:
       # Multiple measurements provided in a nested hierarchy
-      temperature.temperature=10.0 %
-      item.value=10.0 %
+      temperature.temperature,10.0,%
+      item.value,10.0,%
 
   template:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
-      local prefix = std.split(topic, '/measurements-bulk-text/')[0];
+      local prefix = std.split(topic, '/m2/')[0];
       local serial = tedge.getSerial(prefix, meta.device_id);
       local type = std.splitLimitR(topic, "/", 1)[1];
 
@@ -35,131 +34,5 @@ routes:
         topic: 'c8y/measurement/measurements/create',
         message: tedge.measurements.defaults(serial, type) + measurements + meta,
         context: false,
-        skip: std.length($.message) == 0,
-      }
-
-- name: c8y-measurements-group-topic
-  topics:
-    - tedge/measurements-group/+/+
-    - tedge/+/measurements-group/+/+
-  description: |
-    Create a measurement with multiple values for a single group. The topic controls the measurement type and group
-
-    Examples:
-      {"temperature":20.0,"humidity": 10.0,"other":{"data":"some meta info"}}
-
-  template:
-    type: jsonnet
-    value: |
-      local tedge = import 'tedge.libsonnet';
-      local units = import 'units.json';
-      local prefix = std.split(topic, '/measurements-group/')[0];
-      local serial = tedge.getSerial(prefix, meta.device_id);
-
-      local type = std.splitLimitR(topic, '/', 2)[1];
-      local group = std.splitLimitR(topic, '/', 2)[2];
-      local measurements = tedge.measurements.from_simple_obj(group, message, units, function(k) std.join('.', [group, k]));
-
-      {
-        topic: 'c8y/measurement/measurements/create',
-        context: false,
-        message: tedge.measurements.defaults(serial, type) + tedge.measurements.filter_meta(message) + measurements,
-        skip: std.length(measurements) == 0,
-      }
-
-- name: c8y-measurements-group-name-topic
-  topics:
-    - tedge/measurements-group/+/+/+
-    - tedge/+/measurements-group/+/+/+
-  description: |
-    Create a measurement with a single value. The topic controls the measurement type, group and name
-
-    The payload supports both a simple text interface, or a json structure which can contain additional information.
-
-    Examples:
-      # A single measurement with no additional information
-      10.0
-
-      # A single measurement with additional meta information
-      {"value":10.0}
-
-  template:
-    type: jsonnet
-    value: |
-      local tedge = import 'tedge.libsonnet';
-      local units = import 'units.json';
-      local prefix = std.split(topic, '/measurements-group/')[0];
-      local serial = tedge.getSerial(prefix, meta.device_id);
-
-      local type = std.splitLimitR(topic, '/', 3)[1];
-      local group = std.splitLimitR(topic, '/', 3)[2];
-      local name = std.splitLimitR(topic, '/', 3)[3];
-
-      local norm_message = 
-        if std.isObject(message) then
-          message
-        else if std.isString(message) then
-          local _parts = std.split(message, ",");
-          {
-            time: if std.length(_parts) > 0 && !std.isEmpty(_parts[0]) then _parts[0] else _.Now(),
-            value: std.parseJson(if std.length(_parts) > 1 && !std.isEmpty(_parts[1]) then _parts[1] else '0'),
-            [if std.length(_parts) > 2 then 'unit']: _parts[2],
-          }
-        else
-          {
-            value: message,
-            time: _.Now(),
-          }
-      ;
-        
-
-      local measurements = {
-        time: norm_message.time,
-        [group]: {
-          [name]: tedge.measurements.to_meas_value(norm_message, std.join('.', [group, name]), units),
-        },
-      };
-
-      {
-        topic: 'c8y/measurement/measurements/create',
-        context: false,
-        message: tedge.measurements.defaults(serial, type) + tedge.measurements.filter_meta(message) + measurements,
-        skip: std.length(measurements) == 0,
-      }
-
-- name: c8y-measurements-flat
-  topics:
-    - tedge/keyvalue/+
-    - tedge/+/keyvalue/+
-  description: |
-    Create measurement with multiple values in multiple groups. The values are provided in a flat key/value
-    structure where the key contains dots (".") to represent any nested properties.
-
-    The maximum depth of the nested properties is 2. Any remaining dots in the key value will be replaced with "::"
-    as having dots in the json property names are not recommended by Cumulocity IoT due to incompatibility with
-    the measurement series API.
-
-    Non-numeric data will be included in the output as is.
-
-    Examples:
-      {"temperature":20.0,"env.humidity": 10.0}
-
-  template:
-    type: jsonnet
-    value: |
-      local tedge = import 'tedge.libsonnet';
-      local units = import 'units.json';
-      local prefix = std.split(topic, '/keyvalue/')[0];
-      local type = std.splitLimitR(topic, "/", 1)[1];
-      local serial = tedge.getSerial(prefix, meta.device_id);
-
-      local measurements = tedge.measurements.unflatten(
-        tedge.measurements.filter_numeric(message, units)
-      );
-
-      {
-        topic: 'c8y/measurement/measurements/create',
-        context: false,
-        message: tedge.measurements.defaults(serial, type) + tedge.measurements.filter_meta(message) + measurements,
         skip: std.length($.message) == 0,
       }

@@ -1,33 +1,33 @@
 {
-    "te/device/child01": {
+    "te/device/child01//": {
         "@type": "child-device",
-        "displayName": "child01",
+        "name": "child01",
         "type": "SmartHomeHub"
     },
-    "te/device/child02": {
+    "te/device/child02//": {
         "@type": "child-device",
-        "displayName": "child02",
+        "name": "child02",
         "type": "SmartHomeHub"
     },
-    "te/device/nested_child01": {
+    "te/device/nested_child01//": {
         "@type": "child-device",
         "@parent": "te/device/child01",
-        "displayName": "nested_child01"
+        "name": "nested_child01"
     },
-    "te/flowserve/AF012345": {
+    "te/flowserve/AF012345//": {
         "@id": "te:flowserve:AF012345",
         "@type": "child-device"
     },
-    "te/device/gateway01": {
+    "te/device/gateway01//": {
         "@type": "child-device",
         "@id": "te:device:gateway01",
-        "displayName": "gateway01",
+        "name": "gateway01",
         "type": "SmartHomeHub"
     },
-    "te/device/child03": {
+    "te/device/child03//": {
         "@type": "child-device",
         "@id": "",
-        "displayName": "child03",
+        "name": "child03",
         "type": "SmartHomeHub"
     }
 }

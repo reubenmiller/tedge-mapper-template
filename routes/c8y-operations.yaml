@@ -1,0 +1,66 @@
+# yaml-language-server: $schema=../spec/schema.json
+---
+routes:
+- name: c8y-devicecontrol-notifications
+  topics:
+    - c8y/devicecontrol/notifications
+  template:
+    type: jsonnet
+    value: |
+      local utils = import 'utils.libsonnet';
+      local c8y = import 'c8y.libsonnet';
+
+      {
+          message: {
+            # Replace any internal urls with external ones
+            payload: utils.recurseReplace(
+              message,
+              'https?://\\bt\\d+\\.(cumulocity.com|latest.stage.c8y.io)',
+              'https://' + std.get(meta, 'c8y_http', std.get(meta.env, 'TEDGE_ROUTE_C8Y_BASEURL', ''))
+            ),
+            _ctx: {
+              local _ctx = self,
+              local device_id = std.get(meta, 'device_id', ''),
+
+              serial: utils.get(message, 'externalSource.externalId', ''),
+              localSerial: utils.trimPrefix(_ctx.serial, device_id + '_'),
+              parent: if _ctx.serial == device_id then "" else device_id,
+
+              deviceID: std.get(message, 'deviceId', ''),
+              agentID: std.get(message, 'agentId', ''),
+              operationID: std.get(message, 'id', ''),
+              opType: c8y.operation.type(message, 'c8y_', 'unknown'),
+              id: if _ctx.operationID != "" then _ctx.operationID else _.ID(),
+            },
+          },
+          topic: 'c8y/devicecontrol/notifications/' + $.message._ctx.serial + '/' + $.message._ctx.opType,
+          skip: $.message._ctx.serial == '',
+          end: false,
+      }
+
+#
+# Shell/Command operation
+#
+- name: shell-operation
+  topics:
+    - c8y/devicecontrol/notifications/+/c8y_Command
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      local target = tedge.te.convertToTopic(ctx.serial, meta=meta);
+      {
+          topic: std.join(
+            "/",
+            [
+              target,
+              'cmd/execute_shell',
+              'c8y-' + ctx.id,
+            ]
+          ),
+          message: {
+            command: message.payload.c8y_Command.text,
+          },
+          retain: true,
+          context: false,
+      }

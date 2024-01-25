@@ -3,7 +3,7 @@
 routes:
 - name: monitor 
   topics:
-    - tedge/health/+
+    - te/+/+/+/+/status/health
   description: |
     Create events when a service health changes (or is re-sent)
 
@@ -15,7 +15,7 @@ routes:
     value: |
       local c8y = import 'c8y.libsonnet';
 
-      local serviceName = std.split(topic, '/')[2];
+      local serviceName = std.split(topic, '/')[4];
       local status = c8y.service.status(message);
       
       local alarm = function() std.get({

@@ -14,7 +14,7 @@
     },
     "description": "Execute shell command",
     "externalSource": {
-        "externalId": "sim_tedge01_child02",
+        "externalId": "sim_tedge01:device:child02",
         "type": "c8y_Serial"
     }
 }
