@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/reubenmiller/commander/feat/handle-nested-files/schema.json
+
+config:
+  env:
+    C8Y_SETTINGS_DEFAULTS_CACHE: true
+
+tests:
+  publish measurements for main device:
+    command: |
+      go run main.go routes check --entityfile ./tests/te/entities.json --dir ./routes-te -t 'te/flowserve/AF012345///m/runtime' -m '{"operating_hours":10, "time":"2023-05-26T20:10:54.494Z"}' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-measurements (te/+/+/+/+/m/+)
+
+        Input Message
+          topic:    te/flowserve/AF012345///m/runtime
+
+        Output Message (mqtt)
+          topic:    c8y/measurement/measurements/create
+
+            {
+              "externalSource": {
+                "externalId": "te:flowserve:AF012345",
+                "type": "c8y_Serial"
+              },
+              "operating_hours": {
+                "operating_hours": {
+                  "unit": "",
+                  "value": 10
+                }
+              },
+              "time": "2023-05-26T20:10:54.494Z",
+              "type": "runtime"
+            }

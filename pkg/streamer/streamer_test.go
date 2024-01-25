@@ -145,7 +145,7 @@ func Test_StreamerProcessJsonnet(t *testing.T) {
 	for _, c := range testcases {
 		engine := jsonnet.NewEngine(c.Template)
 		stream := NewStreamer(engine)
-		out, err := stream.Process(c.Topic, c.Message)
+		out, err := stream.Process(c.Topic, c.Message, "")
 
 		if c.ExpectedErr != nil {
 			assert.Error(t, err)
@@ -228,7 +228,7 @@ func Test_StreamerProcessJsonnetWithUpdateMessages(t *testing.T) {
 	for _, c := range testcases {
 		engine := jsonnet.NewEngine(c.Template)
 		stream := NewStreamer(engine)
-		out, err := stream.Process(c.Topic, c.Message)
+		out, err := stream.Process(c.Topic, c.Message, "")
 
 		if c.ExpectedErr != nil {
 			assert.Error(t, err)

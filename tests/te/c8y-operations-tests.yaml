@@ -1,0 +1,576 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/reubenmiller/commander/feat/handle-nested-files/schema.json
+
+config:
+  env:
+    C8Y_SETTINGS_DEFAULTS_CACHE: true
+
+tests:
+  Receive operation for the main device:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
+        "c8y_Command":{
+          "text":"ls -l"
+        },
+        "externalSource":{
+          "externalId":"sim_tedge01"
+        },
+        "id":"12345",
+        "status":"PENDING"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications
+
+        Output Message (mqtt)
+          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_Command
+
+            {
+              "_ctx": {
+                "agentID": "",
+                "deviceID": "",
+                "id": "12345",
+                "localSerial": "sim_tedge01",
+                "lvl": 1,
+                "opType": "c8y_Command",
+                "operationID": "12345",
+                "parent": "",
+                "serial": "sim_tedge01"
+              },
+              "payload": {
+                "c8y_Command": {
+                  "text": "ls -l"
+                },
+                "externalSource": {
+                  "externalId": "sim_tedge01"
+                },
+                "id": "12345",
+                "status": "PENDING"
+              }
+            }
+
+        Route: shell-operation (c8y/devicecontrol/notifications/+/c8y_Command)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_Command
+
+        Output Message (mqtt)
+          topic:    te/device/main///cmd/execute_shell/12345
+
+            {
+              "command": "ls -l",
+              "id": "12345"
+            }
+
+  Receive operation for a service on the main device:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
+        "c8y_Command":{
+          "text":"ls -l"
+        },
+        "externalSource":{
+          "externalId":"sim_tedge01:device:main:service:nodered"
+        },
+        "id":"12345",
+        "status":"PENDING"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications
+
+        Output Message (mqtt)
+          topic:    c8y/devicecontrol/notifications/sim_tedge01:device:main:service:nodered/c8y_Command
+
+            {
+              "_ctx": {
+                "agentID": "",
+                "deviceID": "",
+                "id": "12345",
+                "localSerial": "sim_tedge01:device:main:service:nodered",
+                "lvl": 1,
+                "opType": "c8y_Command",
+                "operationID": "12345",
+                "parent": "sim_tedge01",
+                "serial": "sim_tedge01:device:main:service:nodered"
+              },
+              "payload": {
+                "c8y_Command": {
+                  "text": "ls -l"
+                },
+                "externalSource": {
+                  "externalId": "sim_tedge01:device:main:service:nodered"
+                },
+                "id": "12345",
+                "status": "PENDING"
+              }
+            }
+
+        Route: shell-operation (c8y/devicecontrol/notifications/+/c8y_Command)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications/sim_tedge01:device:main:service:nodered/c8y_Command
+
+        Output Message (mqtt)
+          topic:    te/device/main/service/nodered/cmd/execute_shell/12345
+
+            {
+              "command": "ls -l",
+              "id": "12345"
+            }
+
+
+  Receive operation for the child device:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
+        "c8y_Command":{
+          "text":"ls -l"
+        },
+        "externalSource":{
+          "externalId":"sim_tedge01:device:child01"
+        },
+        "id":"12345",
+        "status":"PENDING"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications
+
+        Output Message (mqtt)
+          topic:    c8y/devicecontrol/notifications/sim_tedge01:device:child01/c8y_Command
+
+            {
+              "_ctx": {
+                "agentID": "",
+                "deviceID": "",
+                "id": "12345",
+                "localSerial": "sim_tedge01:device:child01",
+                "lvl": 1,
+                "opType": "c8y_Command",
+                "operationID": "12345",
+                "parent": "sim_tedge01",
+                "serial": "sim_tedge01:device:child01"
+              },
+              "payload": {
+                "c8y_Command": {
+                  "text": "ls -l"
+                },
+                "externalSource": {
+                  "externalId": "sim_tedge01:device:child01"
+                },
+                "id": "12345",
+                "status": "PENDING"
+              }
+            }
+
+        Route: shell-operation (c8y/devicecontrol/notifications/+/c8y_Command)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications/sim_tedge01:device:child01/c8y_Command
+
+        Output Message (mqtt)
+          topic:    te/device/child01///cmd/execute_shell/12345
+
+            {
+              "command": "ls -l",
+              "id": "12345"
+            }
+
+  Receive operation for a service on a child device:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
+        "c8y_Command":{
+          "text":"ls -l"
+        },
+        "externalSource":{
+          "externalId":"sim_tedge01:device:child01:service:nodered"
+        },
+        "id":"12345",
+        "status":"PENDING"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications
+
+        Output Message (mqtt)
+          topic:    c8y/devicecontrol/notifications/sim_tedge01:device:child01:service:nodered/c8y_Command
+
+            {
+              "_ctx": {
+                "agentID": "",
+                "deviceID": "",
+                "id": "12345",
+                "localSerial": "sim_tedge01:device:child01:service:nodered",
+                "lvl": 1,
+                "opType": "c8y_Command",
+                "operationID": "12345",
+                "parent": "sim_tedge01",
+                "serial": "sim_tedge01:device:child01:service:nodered"
+              },
+              "payload": {
+                "c8y_Command": {
+                  "text": "ls -l"
+                },
+                "externalSource": {
+                  "externalId": "sim_tedge01:device:child01:service:nodered"
+                },
+                "id": "12345",
+                "status": "PENDING"
+              }
+            }
+
+        Route: shell-operation (c8y/devicecontrol/notifications/+/c8y_Command)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications/sim_tedge01:device:child01:service:nodered/c8y_Command
+
+        Output Message (mqtt)
+          topic:    te/device/child01/service/nodered/cmd/execute_shell/12345
+
+            {
+              "command": "ls -l",
+              "id": "12345"
+            }
+
+  #
+  # Other operation types
+  #
+  Map operation c8y_Restart:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
+        "c8y_Restart":{},
+        "externalSource":{
+          "externalId":"sim_tedge01"
+        },
+        "id":"12345",
+        "status":"PENDING"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications
+
+        Output Message (mqtt)
+          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_Restart
+
+            {
+              "_ctx": {
+                "agentID": "",
+                "deviceID": "",
+                "id": "12345",
+                "localSerial": "sim_tedge01",
+                "lvl": 1,
+                "opType": "c8y_Restart",
+                "operationID": "12345",
+                "parent": "",
+                "serial": "sim_tedge01"
+              },
+              "payload": {
+                "c8y_Restart": {},
+                "externalSource": {
+                  "externalId": "sim_tedge01"
+                },
+                "id": "12345",
+                "status": "PENDING"
+              }
+            }
+
+        Route: restart-operation (c8y/devicecontrol/notifications/+/c8y_Restart)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_Restart
+
+        Output Message (mqtt)
+          topic:    te/device/main///cmd/restart/12345
+
+            {
+              "id": "12345",
+              "status": "pending"
+            }
+
+  Map operation c8y_UploadConfigFile:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
+        "c8y_UploadConfigFile": {
+          "type": "c8y-bridge.conf"
+        },
+        "externalSource":{
+          "externalId":"sim_tedge01"
+        },
+        "id":"12345",
+        "status":"PENDING"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications
+
+        Output Message (mqtt)
+          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_UploadConfigFile
+
+            {
+              "_ctx": {
+                "agentID": "",
+                "deviceID": "",
+                "id": "12345",
+                "localSerial": "sim_tedge01",
+                "lvl": 1,
+                "opType": "c8y_UploadConfigFile",
+                "operationID": "12345",
+                "parent": "",
+                "serial": "sim_tedge01"
+              },
+              "payload": {
+                "c8y_UploadConfigFile": {
+                  "type": "c8y-bridge.conf"
+                },
+                "externalSource": {
+                  "externalId": "sim_tedge01"
+                },
+                "id": "12345",
+                "status": "PENDING"
+              }
+            }
+
+        Route: upload-config-operation (c8y/devicecontrol/notifications/+/c8y_UploadConfigFile)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_UploadConfigFile
+
+        Output Message (mqtt)
+          topic:    te/device/main///cmd/config_snapshot/12345
+
+            {
+              "id": "12345",
+              "status": "pending",
+              "type": "c8y-bridge.conf",
+              "url": "http://0.0.0.0:8000/tedge/file-transfer/sim_tedge01/config_snapshot/c8y-bridge.conf"
+            }
+
+  Map operation c8y_DownloadConfigFile:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
+        "c8y_DownloadConfigFile": {
+          "type": "config1",
+          "url": "https://example.c8y.io/inventory/binaries/98765"
+        },
+        "externalSource":{
+          "externalId":"sim_tedge01"
+        },
+        "id":"12345",
+        "status":"PENDING"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications
+
+        Output Message (mqtt)
+          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_DownloadConfigFile
+
+            {
+              "_ctx": {
+                "agentID": "",
+                "deviceID": "",
+                "id": "12345",
+                "localSerial": "sim_tedge01",
+                "lvl": 1,
+                "opType": "c8y_DownloadConfigFile",
+                "operationID": "12345",
+                "parent": "",
+                "serial": "sim_tedge01"
+              },
+              "payload": {
+                "c8y_DownloadConfigFile": {
+                  "type": "config1",
+                  "url": "https://example.c8y.io/inventory/binaries/98765"
+                },
+                "externalSource": {
+                  "externalId": "sim_tedge01"
+                },
+                "id": "12345",
+                "status": "PENDING"
+              }
+            }
+
+        Route: download-config-operation (c8y/devicecontrol/notifications/+/c8y_DownloadConfigFile)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_DownloadConfigFile
+
+        Output Message (mqtt)
+          topic:    te/device/main///cmd/config_update/12345
+
+            {
+              "id": "12345",
+              "status": "pending",
+              "type": "config1",
+              "url": "https://example.c8y.io/inventory/binaries/98765"
+            }
+
+
+  Map operation c8y_SoftwareUpdate:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
+        "c8y_SoftwareUpdate": [
+          {
+            "action": "install",
+            "id": "202337",
+            "name": "myapp",
+            "softwareType": "deb",
+            "version": "1.0.1"
+          }
+        ],
+        "externalSource":{
+          "externalId":"sim_tedge01"
+        },
+        "id":"12345",
+        "status":"PENDING"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications
+
+        Output Message (mqtt)
+          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_SoftwareUpdate
+
+            {
+              "_ctx": {
+                "agentID": "",
+                "deviceID": "",
+                "id": "12345",
+                "localSerial": "sim_tedge01",
+                "lvl": 1,
+                "opType": "c8y_SoftwareUpdate",
+                "operationID": "12345",
+                "parent": "",
+                "serial": "sim_tedge01"
+              },
+              "payload": {
+                "c8y_SoftwareUpdate": [
+                  {
+                    "action": "install",
+                    "id": "202337",
+                    "name": "myapp",
+                    "softwareType": "deb",
+                    "version": "1.0.1"
+                  }
+                ],
+                "externalSource": {
+                  "externalId": "sim_tedge01"
+                },
+                "id": "12345",
+                "status": "PENDING"
+              }
+            }
+
+        Route: software-update-operation (c8y/devicecontrol/notifications/+/c8y_SoftwareUpdate)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_SoftwareUpdate
+
+        Output Message (mqtt)
+          topic:    te/device/main///cmd/software_update/12345
+
+            {
+              "id": "12345",
+              "status": "pending",
+              "updateList": [
+                {
+                  "modules": [
+                    {
+                      "action": "install",
+                      "name": "myapp",
+                      "version": "1.0.1"
+                    }
+                  ],
+                  "type": "deb"
+                }
+              ]
+            }
+
+  Map operation c8y_Firmware:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'c8y/devicecontrol/notifications' -m '{
+        "c8y_Firmware": {
+          "name": "ubuntu",
+          "url": "https://dummy.url/firmware.zip",
+          "version": "1.0.2"
+        },
+        "externalSource":{
+          "externalId":"sim_tedge01"
+        },
+        "id":"12345",
+        "status":"PENDING"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications
+
+        Output Message (mqtt)
+          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_Firmware
+
+            {
+              "_ctx": {
+                "agentID": "",
+                "deviceID": "",
+                "id": "12345",
+                "localSerial": "sim_tedge01",
+                "lvl": 1,
+                "opType": "c8y_Firmware",
+                "operationID": "12345",
+                "parent": "",
+                "serial": "sim_tedge01"
+              },
+              "payload": {
+                "c8y_Firmware": {
+                  "name": "ubuntu",
+                  "url": "https://dummy.url/firmware.zip",
+                  "version": "1.0.2"
+                },
+                "externalSource": {
+                  "externalId": "sim_tedge01"
+                },
+                "id": "12345",
+                "status": "PENDING"
+              }
+            }
+
+        Route: firmware-update-operation (c8y/devicecontrol/notifications/+/c8y_Firmware)
+
+        Input Message
+          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_Firmware
+
+        Output Message (mqtt)
+          topic:    te/device/main///cmd/firmware_update/12345
+
+            {
+              "id": "12345",
+              "name": "ubuntu",
+              "sha256": null,
+              "status": "pending",
+              "url": "https://dummy.url/firmware.zip",
+              "version": "1.0.2"
+            }

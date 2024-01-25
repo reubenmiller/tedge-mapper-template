@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=../spec/schema.json
+---
+routes:
+- name: c8y-registration
+  topics:
+    - te/+/+
+    - te/+/+/+/+
+  description: |
+    Register an entity or component
+  template:
+    type: jsonnet
+    value: |
+      local tedge = import 'tedge.libsonnet';
+      local target = tedge.te.getTarget(topic, meta, entities=variables);
+      local serial = tedge.te.sanitizeId(target["@id"]);
+      local registrationType = std.asciiLower(std.get(message, "@type", std.get(target, "entity")));
+      local parent = tedge.te.getTarget(std.get(message, "@parent", ""), meta, entities=variables);
+
+      local outTopic = 
+        if !std.isEmpty(std.get(parent, "@id", "")) then
+          'c8y/s/us/%s' % tedge.te.sanitizeId(parent["@id"])
+        else
+          'c8y/s/us'
+      ;
+
+      local options = {
+        'child-device': {
+          topic: outTopic,
+          raw_message: '101,"%s","%s","%s"' % [
+            serial,
+            std.get(message, 'displayName', serial),
+            std.get(message, 'type', 'c8y_MQTTChildDevice'),
+          ],
+        },
+        'device': {
+          topic: outTopic,
+          raw_message: '100,"%s","%s"' % [
+            std.get(message, 'displayName', std.get(meta, "device_id", serial)),
+            std.get(message, 'type', 'thin-edge.io'),
+          ],
+        },
+        'service': {
+          topic: outTopic,
+          raw_message: '102,"%s","%s","%s","%s"' % [
+            serial,
+            std.get(message, 'type', 'service'),
+            std.get(message, 'displayName', serial),
+            std.get(message, 'status', 'up'),
+          ],
+        },
+      };
+
+      assert registrationType != null : 'Empty registration type';
+      assert std.objectHasAll(options, registrationType) : 'Unknown registration type. got=%s, expected=%s' % [registrationType, std.join(",", std.objectFields(options))];
+
+      {context: false} + options[registrationType]

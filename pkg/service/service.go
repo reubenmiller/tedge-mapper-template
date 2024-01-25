@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/reubenmiller/go-c8y/pkg/c8y"
@@ -23,11 +25,127 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type Entity struct {
+	ID          string          `json:"@id"`
+	EntityType  string          `json:"@type"`
+	ParentID    string          `json:"@parent"`
+	Type        string          `json:"type"`
+	DisplayName string          `json:"displayName"`
+	Contents    []EntityContent `json:"contents,omitempty"`
+}
+
+type EntityContent struct {
+	ID     string `json:"@id"`
+	Type   string `json:"@type"`
+	Value  string `json:"value"`
+	Schema string `json:"schema"`
+}
+
+func NewEntityStore() *EntityStore {
+	return &EntityStore{
+		entities: make(map[string]Entity),
+	}
+}
+
+type EntityStore struct {
+	mu       sync.RWMutex
+	entities map[string]Entity
+	cache    []byte
+}
+
+func (s *EntityStore) SerializedEntities() []byte {
+	slog.Info("Serializing entries")
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.cache
+}
+
+// Update multiple entities from json
+func (s *EntityStore) SetFromJSON(content []byte, deleteExisting bool, ignoreErrors bool) error {
+
+	// Marshal to simple map first so that one invalid format of
+	// an entity does not stop importing the others
+	rawEntries := make(map[string]json.RawMessage)
+	err := json.Unmarshal(content, &rawEntries)
+	if err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Remove all existing map entries
+	if deleteExisting {
+		for k := range s.entities {
+			delete(s.entities, k)
+		}
+	}
+
+	errList := make([]error, 0)
+	// Set new values
+	for k, v := range rawEntries {
+		entity := &Entity{}
+		if err := json.Unmarshal(v, entity); err != nil {
+			errList = append(errList, err)
+		} else {
+			s.entities[k] = *entity
+		}
+	}
+
+	if !ignoreErrors && len(errList) > 0 {
+		return errors.Join(errList...)
+	}
+
+	// update cache
+	b, err := json.Marshal(s.entities)
+	if err != nil {
+		return err
+	}
+	s.cache = b
+	return nil
+}
+
+func (s *EntityStore) Set(key string, entity Entity) error {
+	if key == "" {
+		return fmt.Errorf("key can not be empty")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	slog.Info("Updating entity.", "key", key, "entity", entity)
+	s.entities[key] = entity
+
+	// update cache
+	b, err := json.Marshal(s.entities)
+	if err != nil {
+		return err
+	}
+	s.cache = b
+	return nil
+}
+
+func (s *EntityStore) Get(key string) (Entity, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	entity, ok := s.entities[key]
+
+	if !ok {
+		return Entity{}, fmt.Errorf("not found")
+	}
+	return entity, nil
+}
+
 type Service struct {
 	Client        mqtt.Client
 	APIClient     *APIClient
 	Subscriptions map[string]byte
 	Routes        []routes.Route
+	EntityStore   *EntityStore
+}
+
+func (s *Service) GetVariables() string {
+	return string(s.EntityStore.SerializedEntities())
 }
 
 type APIClient struct {
@@ -197,6 +315,7 @@ func NewService(broker string, clientID string, cleanSession bool, httpEndpoint 
 		Client:        client,
 		Subscriptions: map[string]byte{},
 		Routes:        []routes.Route{},
+		EntityStore:   NewEntityStore(),
 	}
 	service.APIClient = NewCumulocityClient(httpEndpoint, RequestCumulocityToken(client))
 
@@ -286,6 +405,7 @@ func (s *Service) Register(topics []string, qos byte, handler MessageHandler) er
 			slog.Warn("Duplicate topic detected. The new handler will replace the previous one.", "topic", topic)
 		}
 		s.Subscriptions[topic] = qos
+		slog.Info("Adding mqtt route.", "topic", topic)
 		s.Client.AddRoute(topic, handlerWrapper)
 	}
 	return nil

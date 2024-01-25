@@ -1,6 +1,170 @@
 {
     local _self = self,
 
+    te:: {
+        local _te = self,
+
+        getTarget(topic='', meta={}, entities={}, root_namespace="te")::
+            # Get cloud target name from the topic name
+            # It allows a user to define a custom id, or to default to
+            # the topic structure (using the certificate common name as a prefix)
+
+            # Note in cases where a device has been manual registered, then the device id
+            # will be returned as is
+            #
+            # Examples (auto registration):
+            #   te/device/main// => <CN>
+            #   te/device/main/service/tedge-agent => <CN>:device:main:service:tedge-agent
+            #   te/my/full/custom/name => <CN>:my:full:custom:name
+
+            # TODO: If the topic name is present in the entities list, don't add the device_id prefix!
+            # te/flowserve/AF012345 => flowserve/AF012345
+
+            # The topic_id is the internal identifier used to lookup registered entities/components
+            # It should not include the certificate's common name (unless this is part of the users own manual topic structure)
+
+            # Normalize the topic in case people use ':' instead of "/" (namely in referencing parents)
+            local normalized_topic = std.strReplace(topic, ":", "/");
+
+            local topic_id = 
+                std.join("/", [
+                    part
+                    for part in std.split(normalized_topic, "/")[0:5]
+                    if !std.isEmpty(part)
+                ])
+            ;
+
+            # Derive the id from the topic structure
+            # Either use for auto registration, or if the manual registeration
+            # as the main device should match the common name in the device's certificate
+            local derived_target =
+                    # Replace te/device/main with the Common Name value
+                    if topic_id == "%s/device/main" % root_namespace then
+                        meta.device_id
+                    else
+                        # Replace the first segment with the device_id
+                        std.join(":", [
+                            part
+                            for part in [meta.device_id] + std.split(topic_id, "/")[1:5]
+                        ])
+                ;
+
+            local defaultValues = {
+                "@id": derived_target,
+                "contents": _te.getEntityType(normalized_topic, meta=meta, entities=entities),
+            };
+
+            defaultValues + _te.removeEmptyValues(std.get(entities, topic_id, {}))
+        ,
+
+        # Normalize the id value by replacing unsupported characters with :
+        sanitizeId(v):: std.strReplace(v, "/", ":"),
+
+        removeEmptyValues(o)::
+            # Remove any fields which are empty string values
+            {
+                [item.key]: item.value
+                for item in std.objectKeysValues(o)
+                if (std.isString(item.value) && !std.isEmpty(item.value)) || !std.isString(item.value)
+            }
+        ,
+
+        getEntityType(topic="", meta={}, entities={})::
+            # Infer the entity type based on the topic
+            # Types:
+            # * device
+            # * child-device
+            # * service
+            #
+            local getIndex(arr, index, defaultValue="") = 
+                if index < std.length(arr) then
+                    arr[index]
+                else
+                    defaultValue
+            ;
+
+            local parts = std.split(topic, "/")[0:5];
+            local entity_namespace = getIndex(parts, 1);
+            local entity_name = getIndex(parts, 2);
+            local component_namespace = getIndex(parts, 3);
+            local component_name = getIndex(parts, 4);
+
+            local entity_types = {
+                "main": "device",
+            };
+            local component_types = {
+                "service": "service",
+            };
+
+            {
+                entity: std.get(entity_types, entity_name, "child-device"),
+                component: std.get(component_types, component_namespace, ""),
+            }
+        ,
+
+        getExternalDeviceSource(topic, meta={}, entities={})::
+            local target = _te.getTarget(topic, meta=meta, entities=entities);
+            {
+                externalSource: {
+                    externalId: target["@id"],
+                    type: "c8y_Serial",
+                },
+            }
+        ,
+
+        convertToTopic(external_identity='', meta={}, entities={}, root_namespace="te")::
+            # Convert the cloud target name to a topic name
+            #
+            # Examples:
+            #   <CN> => te/device/main//
+            #   <CN>:device:main:service:tedge-agent => te/device/main/service/tedge-agent
+            #   <CN>:my:full:custom:name => te/my/full/custom/name
+
+            local padTopic(topicStr) =
+                # Pad topic to have both entity/component, though the component can be empty
+                # Examples:
+                #   te/device/main => te/device/main//
+                #   te/device/main/service/nodered => te/device/main/service/nodered
+                local segment_count = std.length(std.split(topicStr, "/"));
+                if segment_count < 4 then
+                    topicStr + std.repeat("/", 5 - segment_count)
+                else
+                    topicStr
+            ;
+
+            local topic_id = 
+                std.join(":", [
+                    part
+                    for part in std.split(external_identity, ":")[0:5]
+                    if !std.isEmpty(part)
+                ])
+            ;
+
+            # Look if entity has been registered under this id
+            local entity_matches = [
+                item["@id"]
+                for item in std.objectKeysValues(entities)
+                if std.get(item.value, "@id") == topic_id
+            ];
+
+            if std.length(entity_matches) > 0 then
+                padTopic(std.strReplace(entity_matches[0]["@id"], ":", "/"))
+            else
+                local topic = 
+                    if external_identity == std.get(meta, "device_id") then
+                        "%s/device/main//" % root_namespace
+                    else
+                        local tmp = std.join("/", [
+                            part
+                            for part in [root_namespace] + std.split(external_identity, ":")[1:5]
+                            if !std.isEmpty(part)
+                        ]);
+                        padTopic(tmp)
+                ;
+                topic
+        ,
+    },
+
     # Get the topic prefix, e.g. tedge or tedge/child01
     # depending if the device has a parent or not
     topicPrefix(serial, parent='', prefix='tedge')::
@@ -51,44 +215,6 @@
             "%s/%s" % [smartrest, tmp],
             "/"
         )
-    ,
-
-    lookupID(localName, meta={})::
-        local device_mapping = import 'device_mapping.json';
-        if localName in device_mapping then
-            std.get(device_mapping, localName, localName)
-        else
-            std.join('_', [meta.device_id, localName])
-    ,
-
-    getExternalDeviceId(topic, meta={})::
-        local device_mapping = import 'device_mapping.json';
-        local localName = std.split(topic, '/')[1];
-        _self.lookupID(localName, meta)
-    ,
-    getExternalDeviceSource(topic, meta={})::
-        {
-            externalSource: {
-                externalId: _self.getExternalDeviceId(topic, meta),
-                type: "c8y_Serial",
-            },
-        }
-    ,
-
-    getExternalServiceId(topic, meta={})::
-        local parts = std.split(topic, '/');
-        '%s_%s' % [
-            _self.lookupID(parts[1], meta),
-            parts[3]
-        ]
-    ,
-    getExternalServiceSource(topic, meta={})::
-        {
-            externalSource: {
-                externalId: _self.getExternalServiceId(topic, meta),
-                type: "c8y_Serial",
-            },
-        }
     ,
 
     getType(topic="/")::

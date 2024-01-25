@@ -36,9 +36,9 @@ func optionalDelay(delaySec float32, f func()) {
 	}
 }
 
-func WithMQTTPublisher(client mqtt.Client, topic string, message any) func() {
+func WithMQTTPublisher(client mqtt.Client, topic string, qos byte, retain bool, message any) func() {
 	return func() {
-		client.Publish(topic, 0, false, message)
+		client.Publish(topic, qos, retain, message)
 	}
 }
 
@@ -50,7 +50,9 @@ func WithRESTRequest(client *APIClient, host, method, path string, message any) 
 	}
 }
 
-func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Route, maxDepth int, postDelay time.Duration, opts ...jsonnet.TemplateOption) MessageHandler {
+type VariablesFactory func() string
+
+func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Route, variablesFactory VariablesFactory, maxDepth int, postDelay time.Duration, opts ...jsonnet.TemplateOption) MessageHandler {
 
 	if maxDepth <= 0 {
 		maxDepth = 3
@@ -64,6 +66,12 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 
 	if route.PreProcessor != nil {
 		route.PreparePreProcessor()
+	}
+
+	variablesFunc := func() string { return "" }
+
+	if variablesFactory != nil {
+		variablesFunc = variablesFactory
 	}
 
 	return func(topic, message string) (*streamer.OutputMessage, error) {
@@ -81,7 +89,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 			}
 		}
 
-		sm, err := stream.Process(topic, message)
+		sm, err := stream.Process(topic, message, variablesFunc())
 		if err != nil {
 			slog.Error("Template error.", "route", route.Name)
 
@@ -110,7 +118,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 			case string:
 				slog.Info("Publishing update message.", "topic", m.Topic, "message", m.Message)
 				if client != nil && !engine.DryRun() {
-					optionalDelay(m.Delay, WithMQTTPublisher(client, m.Topic, m.Message))
+					optionalDelay(m.Delay, WithMQTTPublisher(client, m.Topic, m.GetQoS(), m.Retain, m.Message))
 				}
 			default:
 				preMsg, preErr := json.Marshal(m.Message)
@@ -119,7 +127,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 				} else {
 					slog.Info("Publishing update message.", "topic", m.Topic, "message", string(preMsg))
 					if client != nil && !engine.DryRun() {
-						optionalDelay(m.Delay, WithMQTTPublisher(client, m.Topic, preMsg))
+						optionalDelay(m.Delay, WithMQTTPublisher(client, m.Topic, m.GetQoS(), m.Retain, preMsg))
 					}
 				}
 			}
@@ -158,14 +166,14 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 			// TODO: Switch to using the .MessageString() method
 			if sm.IsMQTTMessage() {
 				if sm.RawMessage != "" {
-					slog.Info("Publishing new message.", "topic", sm.Topic, "message", sm.RawMessage, "delay", sm.Delay)
+					slog.Info("Publishing new raw message.", "topic", sm.Topic, "message", sm.RawMessage, "delay", sm.Delay)
 					if client != nil && !engine.DryRun() {
-						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, sm.RawMessage))
+						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, sm.GetQoS(), sm.Retain, sm.RawMessage))
 					}
 				} else {
 					slog.Info("Publishing new message.", "topic", sm.Topic, "message", string(output), "delay", sm.Delay)
 					if client != nil && !engine.DryRun() {
-						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, output))
+						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, sm.GetQoS(), sm.Retain, output))
 					}
 				}
 			}
@@ -317,15 +325,87 @@ func NewMetaData(defaults ...MetaOption) map[string]any {
 	return meta
 }
 
-func NewDefaultService(broker string, clientID string, cleanSession bool, httpEndpoint string, routeDirs []string, maxdepth int, postDelay time.Duration, debug bool, dryRun bool, metaOptions []MetaOption, libPaths []string, useColor bool) (*Service, error) {
-	app, err := NewService(broker, clientID, cleanSession, httpEndpoint, dryRun)
+type DefaultServiceOptions struct {
+	Broker                     string
+	ClientID                   string
+	CleanSession               bool
+	HTTPEndpoint               string
+	RouteDirs                  []string
+	MaxRouteDepth              int
+	PostMessageDelay           time.Duration
+	Debug                      bool
+	DryRun                     bool
+	MetaOptions                []MetaOption
+	LibraryPaths               []string
+	UseColor                   bool
+	EntityFile                 string
+	EnableRegistrationListener bool
+}
+
+func NewDefaultService(opts *DefaultServiceOptions) (*Service, error) {
+	app, err := NewService(opts.Broker, opts.ClientID, opts.CleanSession, opts.HTTPEndpoint, opts.DryRun)
 	if err != nil {
 		return nil, err
 	}
 
-	meta := NewMetaData(metaOptions...)
-	routes := app.ScanMappingFiles(routeDirs)
+	meta := NewMetaData(opts.MetaOptions...)
 
+	if opts.EntityFile != "" {
+		if _, err := os.Stat(opts.EntityFile); err == nil {
+			entityFileContents, readErr := os.ReadFile(opts.EntityFile)
+			if readErr != nil {
+				return nil, readErr
+			}
+			slog.Info("Loading initial entity definitions from file.", "file", opts.EntityFile, "contents", string(entityFileContents))
+			app.EntityStore.SetFromJSON(entityFileContents, true, true)
+		}
+	}
+
+	// Handle entity registration independently
+	registrationClient := mqtt.NewClient(mqtt.NewClientOptions().SetClientID(opts.ClientID + "_regListener").AddBroker(opts.Broker).SetCleanSession(opts.CleanSession))
+	if token := registrationClient.Connect(); !token.Wait() && token.Error() != nil {
+		return nil, token.Error()
+	}
+
+	if opts.EnableRegistrationListener {
+		registerCallback := func(c mqtt.Client, m mqtt.Message) {
+			slog.Info("Received registration message.", "topic", m.Topic(), "message", m.Payload())
+			nonEmptyParts := make([]string, 0)
+			for _, part := range strings.Split(m.Topic(), "/") {
+				if part != "" {
+					nonEmptyParts = append(nonEmptyParts, part)
+				}
+			}
+			name := strings.Join(nonEmptyParts, "/")
+
+			entity := Entity{}
+			if err := json.Unmarshal(m.Payload(), &entity); err != nil {
+				slog.Warn("Invalid registration payload.", err)
+				return
+			}
+
+			slog.Info("Registering entity", "topic", m.Topic(), "name", name)
+
+			if err := app.EntityStore.Set(name, entity); err != nil {
+				slog.Warn("Could not register entity", "error", err)
+				return
+			}
+
+			slog.Info("Registered entity successfully", "entity", slog.StringValue(fmt.Sprintf("%#v", entity)))
+		}
+
+		regTopics := map[string]byte{
+			"te/+":       1,
+			"te/+/+":     1,
+			"te/+/+/+":   1,
+			"te/+/+/+/+": 1,
+		}
+		if token := registrationClient.SubscribeMultiple(regTopics, registerCallback); token.Wait() && token.Error() != nil {
+			return nil, fmt.Errorf("error subscribing to topic '%v': %v", regTopics, token.Error())
+		}
+	}
+
+	routes := app.ScanMappingFiles(opts.RouteDirs)
 	for _, route := range routes {
 		if !route.Skip {
 			slog.Info("Registering route.", "name", route.Name, "topics", route.DisplayTopics())
@@ -336,13 +416,14 @@ func NewDefaultService(broker string, clientID string, cleanSession bool, httpEn
 					app.Client,
 					app.APIClient,
 					route,
-					maxdepth,
-					postDelay,
+					app.GetVariables,
+					opts.MaxRouteDepth,
+					opts.PostMessageDelay,
 					jsonnet.WithMetaData(meta),
-					jsonnet.WithDebug(debug),
-					jsonnet.WithDryRun(dryRun),
-					jsonnet.WithLibraryPaths(libPaths...),
-					jsonnet.WithColorStackTrace(useColor),
+					jsonnet.WithDebug(opts.Debug),
+					jsonnet.WithDryRun(opts.DryRun),
+					jsonnet.WithLibraryPaths(opts.LibraryPaths...),
+					jsonnet.WithColorStackTrace(opts.UseColor),
 				),
 			)
 			if err != nil {

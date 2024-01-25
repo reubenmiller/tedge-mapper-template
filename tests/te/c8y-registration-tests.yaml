@@ -1,0 +1,166 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/reubenmiller/commander/feat/handle-nested-files/schema.json
+
+config:
+  env:
+    C8Y_SETTINGS_DEFAULTS_CACHE: true
+
+tests:
+  #
+  # Nested child devices
+  #
+  register nested child device without a pre-registered parent with slashes:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'te/device/nested_child10' -m '{
+        "@type": "child-device",
+        "@parent": "te/device/nested_gateway",
+        "displayName": "nested_child10"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-registration (te/+/+, te/+/+/+/+)
+
+        Input Message
+          topic:    te/device/nested_child10
+
+        Output Message (mqtt)
+          topic:    c8y/s/us/sim_tedge01:device:nested_gateway
+        101,"sim_tedge01:device:nested_child10","nested_child10","c8y_MQTTChildDevice"
+  
+  register nested child device without a pre-registered parent id with colons:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'te/device/nested_child10' -m '{
+        "@type": "child-device",
+        "@parent": "te:device:nested_gateway",
+        "displayName": "nested_child10"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-registration (te/+/+, te/+/+/+/+)
+
+        Input Message
+          topic:    te/device/nested_child10
+
+        Output Message (mqtt)
+          topic:    c8y/s/us/sim_tedge01:device:nested_gateway
+        101,"sim_tedge01:device:nested_child10","nested_child10","c8y_MQTTChildDevice"
+
+  register nested child device with a pre-registered parent which has an explicit id:
+    command: |
+      go run main.go routes check --entityfile ./tests/te/entities.json --dir ./routes-te -t 'te/device/sensor01' -m '{
+        "@type": "child-device",
+        "@parent": "te/device/gateway01",
+        "type": "matter",
+        "displayName": "sensor01"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-registration (te/+/+, te/+/+/+/+)
+
+        Input Message
+          topic:    te/device/sensor01
+
+        Output Message (mqtt)
+          topic:    c8y/s/us/te:device:gateway01
+        101,"sim_tedge01:device:sensor01","sensor01","matter"
+
+  #
+  # Child device
+  #
+  register a child device with an explicit id:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'te/device/sensor01' -m '{
+        "@type": "child-device",
+        "type": "matter",
+        "displayName": "Custom sensor01"
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: c8y-registration (te/+/+, te/+/+/+/+)
+
+        Input Message
+          topic:    te/device/sensor01
+
+        Output Message (mqtt)
+          topic:    c8y/s/us/sim_tedge01
+        101,"sim_tedge01:device:sensor01","Custom sensor01","matter"
+
+  #
+  # Child device
+  #
+  register a service of a child device:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'te/component/sensor01' -m '{
+        "@type": "service",
+        "type": "matter",
+        "displayName": "Custom sensor01"
+      }' -s --device-id sim_tedge01
+      
+    stdout:
+      exactly: |
+        Route: c8y-registration (te/+/+, te/+/+/+/+)
+
+        Input Message
+          topic:    te/component/sensor01
+
+        Output Message (mqtt)
+          topic:    c8y/s/us/sim_tedge01
+        102,"sim_tedge01:component:sensor01","matter","Custom sensor01","up"
+
+
+  #
+  # Custom registration
+  #
+  register a custom child device without an explicit parent:
+    command: |
+      go run main.go routes check --dir ./routes-te -t 'te/customer1/sandbox01' -m '{
+        "@type": "child-device",
+        "displayName": "sandbox 01"
+      }' -s --device-id sim_tedge01
+      
+    stdout:
+      exactly: |
+        Route: c8y-registration (te/+/+, te/+/+/+/+)
+
+        Input Message
+          topic:    te/customer1/sandbox01
+
+        Output Message (mqtt)
+          topic:    c8y/s/us/sim_tedge01
+        101,"sim_tedge01:customer1:sandbox01","sandbox 01","c8y_MQTTChildDevice"
+
+  register a device which has an empty @id in the entity store:
+    command: |
+      go run main.go routes check --entityfile ./tests/te/entities.json --dir ./routes-te -t 'te/device/child03' -m '{
+        "@type": "child-device",
+        "displayName": "child03"
+      }' -s --device-id sim_tedge01
+      
+    stdout:
+      exactly: |
+        Route: c8y-registration (te/+/+, te/+/+/+/+)
+
+        Input Message
+          topic:    te/device/child03
+
+        Output Message (mqtt)
+          topic:    c8y/s/us/sim_tedge01
+        101,"sim_tedge01:device:child03","child03","c8y_MQTTChildDevice"
+
+  register a device which has an empty @id in the registration message:
+    command: |
+      go run main.go routes check --entityfile ./tests/te/entities.json --dir ./routes-te -t 'te/device/child03' -m '{
+        "@type": "child-device",
+        "@id": "",
+        "displayName": "child03"
+      }' -s --device-id sim_tedge01
+      
+    stdout:
+      exactly: |
+        Route: c8y-registration (te/+/+, te/+/+/+/+)
+
+        Input Message
+          topic:    te/device/child03
+
+        Output Message (mqtt)
+          topic:    c8y/s/us/sim_tedge01
+        101,"sim_tedge01:device:child03","child03","c8y_MQTTChildDevice"
