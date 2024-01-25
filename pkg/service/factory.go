@@ -223,15 +223,6 @@ func SendAPIRequest(client *APIClient, host, method, path string, body any) (err
 	return nil
 }
 
-func GetCumulocityURL() (string, error) {
-	_, err := exec.LookPath(TedgeBinary)
-	if err != nil {
-		return "", err
-	}
-	cmd, err := exec.Command("tedge", "config", "get", "c8y.http").Output()
-	return string(cmd), err
-}
-
 type MetaOption func(m map[string]any)
 
 func WithMetaDefaultValue(key string, value any) MetaOption {
@@ -395,9 +386,6 @@ func NewDefaultService(opts *DefaultServiceOptions) (*Service, error) {
 		}
 
 		regTopics := map[string]byte{
-			"te/+":       1,
-			"te/+/+":     1,
-			"te/+/+/+":   1,
 			"te/+/+/+/+": 1,
 		}
 		if token := registrationClient.SubscribeMultiple(regTopics, registerCallback); token.Wait() && token.Error() != nil {
