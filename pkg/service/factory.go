@@ -360,7 +360,7 @@ func NewDefaultService(opts *DefaultServiceOptions) (*Service, error) {
 
 	if opts.EnableRegistrationListener {
 		registerCallback := func(c mqtt.Client, m mqtt.Message) {
-			slog.Info("Received registration message.", "topic", m.Topic(), "message", m.Payload())
+			slog.Info("Received registration message.", "topic", m.Topic(), "message", string(m.Payload()))
 			nonEmptyParts := make([]string, 0)
 			for _, part := range strings.Split(m.Topic(), "/") {
 				if part != "" {
