@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net/http"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"

@@ -3,6 +3,7 @@ package jsonnet
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/google/go-jsonnet/ast"
 	"github.com/teris-io/shortid"
 	"github.com/tidwall/gjson"
-	"golang.org/x/exp/slog"
 )
 
 var HeaderMarker = "\n###\n"

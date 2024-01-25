@@ -4,6 +4,7 @@ Copyright © 2023 thin-edge thinedge@thin-edge.io
 package cmd
 
 import (
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,7 +12,6 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/service"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slog"
 )
 
 var ArgBroker string
