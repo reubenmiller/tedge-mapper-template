@@ -48,7 +48,7 @@ routes:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
-      local target = tedge.te.convertToTopic(ctx.serial, meta=meta);
+      local target = tedge.v1.convertToTopic(ctx.serial, meta=meta);
       {
           topic: std.join(
             "/",

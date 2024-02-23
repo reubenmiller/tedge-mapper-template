@@ -1,8 +1,12 @@
 {
     local _self = self,
 
-    te:: {
+    v1:: {
         local _te = self,
+
+        getType(topic="/")::
+            std.splitLimitR(topic, "/", 1)[1]
+        ,
 
         getTarget(topic='', meta={}, entities={}, root_namespace="te")::
             # Get cloud target name from the topic name
@@ -165,15 +169,6 @@
         ,
     },
 
-    # Get the topic prefix, e.g. tedge or tedge/child01
-    # depending if the device has a parent or not
-    topicPrefix(serial, parent='', prefix='te')::
-        if std.isEmpty(parent) then
-            prefix
-        else
-            '%s/%s' % [prefix, serial]
-    ,
-
     #
     # Get the external id from a topic.
     # e.g. it will convert:
@@ -217,14 +212,6 @@
         )
     ,
 
-    getType(topic="/")::
-        std.splitLimitR(topic, "/", 1)[1]
-    ,
-
-    getExternalId(items=[], sep='_')::
-        std.join(sep, items)
-    ,
-
     __padArray(arr, n, default=''):: [
         local len = std.length(arr);
         if i < len then
@@ -248,7 +235,7 @@
             {
                 [key_parts[0]]+: {
                     [key_parts[1]]+: {
-                    value: parts[1],
+                    value: std.parseJson(parts[1]),
                     unit: parts[2],
                     }
                 },
@@ -373,18 +360,6 @@
                 }
             else
                 {}
-        ,
-
-        # Default measurement fields
-        defaults(serial, type='thinedge')::
-            {
-                type: type,
-                time: std.native('Now')(),
-                externalSource: {
-                    externalId: serial,
-                    type: 'c8y_Serial',
-                },
-            }
         ,
     },
 }

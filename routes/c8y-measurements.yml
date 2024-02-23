@@ -16,12 +16,14 @@ routes:
     type: jsonnet
     value: |
       local tedge = import 'tedge.libsonnet';
-      local prefix = std.split(topic, '/m2/')[0];
-      local serial = tedge.getSerial(prefix, meta.device_id);
-      local type = std.splitLimitR(topic, "/", 1)[1];
+      local source = tedge.v1.getExternalDeviceSource(topic, meta);
+      local type = tedge.v1.getType(topic);
 
-      local meta =
-        {time: _.Now()}
+      local defaults =
+        {
+          time: _.Now(),
+          type: type,
+        }
         + {
             ['time']: std.splitLimit(line, ',', 1)[1]
             for line in std.split(message, '\n')
@@ -32,7 +34,7 @@ routes:
       local measurements = tedge.measurements.from_text(message);
       {
         topic: 'c8y/measurement/measurements/create',
-        message: tedge.measurements.defaults(serial, type) + measurements + meta,
+        message: source + measurements + defaults,
         context: false,
         skip: std.length($.message) == 0,
       }
