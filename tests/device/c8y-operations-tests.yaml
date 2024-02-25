@@ -5,17 +5,11 @@ config:
     C8Y_SETTINGS_DEFAULTS_CACHE: true
 
 tests:
-  Processes command/shell operations:
-    command: |
-      go run main.go routes check --dir ./routes --dir ./routes-simulation -t c8y/devicecontrol/notifications -m tests/messages/child/command.json -s --device-id sim_tedge01
-    stdout:
-      file: tests/messages/child/command.golden
-
   Receive operation for the main device:
     command: |
       go run main.go routes check --dir ./routes -t 'c8y/devicecontrol/notifications' -m '{
-        "c8y_Command":{
-          "text":"ls -l"
+        "te_Report":{
+          "name":"hello"
         },
         "externalSource":{
           "externalId":"sim_tedge01"
@@ -25,221 +19,27 @@ tests:
       }' -s --device-id sim_tedge01
     stdout:
       exactly: |
-        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
+        Route: c8y-operation-mapper (c8y/devicecontrol/notifications)
 
         Input Message
           topic:    c8y/devicecontrol/notifications
 
         Output Message (mqtt)
-          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_Command
+          topic:    te/device/main///cmd/report/c8y-12345
 
             {
-              "_ctx": {
-                "agentID": "",
-                "deviceID": "",
-                "id": "12345",
-                "localSerial": "sim_tedge01",
-                "lvl": 1,
-                "opType": "c8y_Command",
-                "operationID": "12345",
-                "parent": "",
-                "serial": "sim_tedge01"
+              "_withTransitions": true,
+              "externalSource": {
+                "externalId": "sim_tedge01"
               },
-              "payload": {
-                "c8y_Command": {
-                  "text": "ls -l"
-                },
-                "externalSource": {
-                  "externalId": "sim_tedge01"
-                },
-                "id": "12345",
-                "status": "PENDING"
+              "id": "12345",
+              "status": "init",
+              "te_Report": {
+                "name": "hello"
               }
             }
 
-        Route: shell-operation (c8y/devicecontrol/notifications/+/c8y_Command)
+        Route: operation-cleanup (te/+/+/+/+/cmd/+/+)
 
         Input Message
-          topic:    c8y/devicecontrol/notifications/sim_tedge01/c8y_Command
-
-        Output Message (mqtt)
-          topic:    te/device/main///cmd/execute_shell/c8y-12345
-
-            {
-              "command": "ls -l"
-            }
-
-  Receive operation for a service on the main device:
-    command: |
-      go run main.go routes check --dir ./routes -t 'c8y/devicecontrol/notifications' -m '{
-        "c8y_Command":{
-          "text":"ls -l"
-        },
-        "externalSource":{
-          "externalId":"sim_tedge01:device:main:service:nodered"
-        },
-        "id":"12345",
-        "status":"PENDING"
-      }' -s --device-id sim_tedge01
-    stdout:
-      exactly: |
-        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
-
-        Input Message
-          topic:    c8y/devicecontrol/notifications
-
-        Output Message (mqtt)
-          topic:    c8y/devicecontrol/notifications/sim_tedge01:device:main:service:nodered/c8y_Command
-
-            {
-              "_ctx": {
-                "agentID": "",
-                "deviceID": "",
-                "id": "12345",
-                "localSerial": "sim_tedge01:device:main:service:nodered",
-                "lvl": 1,
-                "opType": "c8y_Command",
-                "operationID": "12345",
-                "parent": "sim_tedge01",
-                "serial": "sim_tedge01:device:main:service:nodered"
-              },
-              "payload": {
-                "c8y_Command": {
-                  "text": "ls -l"
-                },
-                "externalSource": {
-                  "externalId": "sim_tedge01:device:main:service:nodered"
-                },
-                "id": "12345",
-                "status": "PENDING"
-              }
-            }
-
-        Route: shell-operation (c8y/devicecontrol/notifications/+/c8y_Command)
-
-        Input Message
-          topic:    c8y/devicecontrol/notifications/sim_tedge01:device:main:service:nodered/c8y_Command
-
-        Output Message (mqtt)
-          topic:    te/device/main/service/nodered/cmd/execute_shell/c8y-12345
-
-            {
-              "command": "ls -l"
-            }
-
-
-  Receive operation for the child device:
-    command: |
-      go run main.go routes check --dir ./routes -t 'c8y/devicecontrol/notifications' -m '{
-        "c8y_Command":{
-          "text":"ls -l"
-        },
-        "externalSource":{
-          "externalId":"sim_tedge01:device:child01"
-        },
-        "id":"12345",
-        "status":"PENDING"
-      }' -s --device-id sim_tedge01
-    stdout:
-      exactly: |
-        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
-
-        Input Message
-          topic:    c8y/devicecontrol/notifications
-
-        Output Message (mqtt)
-          topic:    c8y/devicecontrol/notifications/sim_tedge01:device:child01/c8y_Command
-
-            {
-              "_ctx": {
-                "agentID": "",
-                "deviceID": "",
-                "id": "12345",
-                "localSerial": "sim_tedge01:device:child01",
-                "lvl": 1,
-                "opType": "c8y_Command",
-                "operationID": "12345",
-                "parent": "sim_tedge01",
-                "serial": "sim_tedge01:device:child01"
-              },
-              "payload": {
-                "c8y_Command": {
-                  "text": "ls -l"
-                },
-                "externalSource": {
-                  "externalId": "sim_tedge01:device:child01"
-                },
-                "id": "12345",
-                "status": "PENDING"
-              }
-            }
-
-        Route: shell-operation (c8y/devicecontrol/notifications/+/c8y_Command)
-
-        Input Message
-          topic:    c8y/devicecontrol/notifications/sim_tedge01:device:child01/c8y_Command
-
-        Output Message (mqtt)
-          topic:    te/device/child01///cmd/execute_shell/c8y-12345
-
-            {
-              "command": "ls -l"
-            }
-
-  Receive operation for a service on a child device:
-    command: |
-      go run main.go routes check --dir ./routes -t 'c8y/devicecontrol/notifications' -m '{
-        "c8y_Command":{
-          "text":"ls -l"
-        },
-        "externalSource":{
-          "externalId":"sim_tedge01:device:child01:service:nodered"
-        },
-        "id":"12345",
-        "status":"PENDING"
-      }' -s --device-id sim_tedge01
-    stdout:
-      exactly: |
-        Route: c8y-devicecontrol-notifications (c8y/devicecontrol/notifications)
-
-        Input Message
-          topic:    c8y/devicecontrol/notifications
-
-        Output Message (mqtt)
-          topic:    c8y/devicecontrol/notifications/sim_tedge01:device:child01:service:nodered/c8y_Command
-
-            {
-              "_ctx": {
-                "agentID": "",
-                "deviceID": "",
-                "id": "12345",
-                "localSerial": "sim_tedge01:device:child01:service:nodered",
-                "lvl": 1,
-                "opType": "c8y_Command",
-                "operationID": "12345",
-                "parent": "sim_tedge01",
-                "serial": "sim_tedge01:device:child01:service:nodered"
-              },
-              "payload": {
-                "c8y_Command": {
-                  "text": "ls -l"
-                },
-                "externalSource": {
-                  "externalId": "sim_tedge01:device:child01:service:nodered"
-                },
-                "id": "12345",
-                "status": "PENDING"
-              }
-            }
-
-        Route: shell-operation (c8y/devicecontrol/notifications/+/c8y_Command)
-
-        Input Message
-          topic:    c8y/devicecontrol/notifications/sim_tedge01:device:child01:service:nodered/c8y_Command
-
-        Output Message (mqtt)
-          topic:    te/device/child01/service/nodered/cmd/execute_shell/c8y-12345
-
-            {
-              "command": "ls -l"
-            }
+          topic:    te/device/main///cmd/report/c8y-12345
