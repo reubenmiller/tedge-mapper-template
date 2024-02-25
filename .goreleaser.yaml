@@ -203,6 +203,8 @@ dockers:
     goamd64: 'v1'
     dockerfile: images/Dockerfile
     use: buildx
+    extra_files:
+      - routes
     build_flag_templates:
     - "--pull"
     - "--label=org.opencontainers.image.created={{.Date}}"
@@ -219,6 +221,8 @@ dockers:
     goarch: arm64
     dockerfile: images/Dockerfile
     use: buildx
+    extra_files:
+      - routes
     build_flag_templates:
     - "--pull"
     - "--label=org.opencontainers.image.created={{.Date}}"
@@ -236,6 +240,8 @@ dockers:
     goarm: '7'
     dockerfile: images/Dockerfile
     use: buildx
+    extra_files:
+      - routes
     build_flag_templates:
     - "--pull"
     - "--label=org.opencontainers.image.created={{.Date}}"
