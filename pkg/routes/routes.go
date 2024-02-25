@@ -17,6 +17,7 @@ type Specification struct {
 
 type Route struct {
 	Name         string        `yaml:"name"`
+	Disable      bool          `yaml:"disable"`
 	Topics       []string      `yaml:"topics"`
 	Skip         bool          `yaml:"skip"`
 	Template     Template      `yaml:"template"`

@@ -165,10 +165,10 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 		} else {
 			// TODO: Switch to using the .MessageString() method
 			if sm.IsMQTTMessage() {
-				if sm.RawMessage != "" {
-					slog.Info("Publishing new raw message.", "topic", sm.Topic, "message", sm.RawMessage, "delay", sm.Delay)
+				if sm.RawMessage != nil {
+					slog.Info("Publishing new raw message.", "topic", sm.Topic, "message", *sm.RawMessage, "retain", sm.Retain, "delay", sm.Delay)
 					if client != nil && !engine.DryRun() {
-						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, sm.GetQoS(), sm.Retain, sm.RawMessage))
+						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, sm.GetQoS(), sm.Retain, *sm.RawMessage))
 					}
 				} else {
 					slog.Info("Publishing new message.", "topic", sm.Topic, "message", string(output), "delay", sm.Delay)
@@ -184,7 +184,7 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 					return nil, err
 				}
 				if !engine.DryRun() {
-					optionalDelay(sm.Delay, WithRESTRequest(apiClient, sm.API.Host, sm.API.Method, sm.API.Path, sm.Message))
+					optionalDelay(sm.Delay, WithRESTRequest(apiClient, sm.API.Host, sm.API.Method, sm.API.Path, sm.API.Body))
 				}
 			}
 
@@ -450,22 +450,24 @@ func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, c
 		}
 	}
 
-	fmt.Fprintf(w, "\nOutput Message (%s)\n", out.GetType())
-	if out.IsMQTTMessage() {
+	if !out.Skip {
+		fmt.Fprintf(w, "\nOutput Message (%s)\n", out.GetType())
+	}
+	if out.IsMQTTMessage() && !out.Skip {
 		fmt.Fprintf(w, "  %-10s%v\n", "topic:", out.Topic)
 		if out.End {
 			fmt.Fprintf(w, "  %-10s%v\n", "end:", out.End)
 		}
 	}
 
-	if out.IsAPIRequest() {
+	if out.IsAPIRequest() && !out.Skip {
 		// API message don't chain, so no point printing the 'end' meta info
 		fmt.Fprintf(w, "  %-10s%v %v\n", "request:", out.API.Method, out.API.Path)
 	}
 
 	if !out.Skip {
-		if out.RawMessage != "" {
-			fmt.Fprintf(w, "%s\n", out.RawMessage)
+		if out.RawMessage != nil {
+			fmt.Fprintf(w, "%s\n", *out.RawMessage)
 		} else {
 			displayJsonMessage(w, out.Message, compact, useColor)
 		}

@@ -234,10 +234,6 @@ func NewCumulocityClient(host string) *APIClient {
 }
 
 func (c *APIClient) SendRequest(ctx context.Context, options c8y.RequestOptions) (*c8y.Response, error) {
-	if c.Token == "" && c.Password == "" {
-		return nil, errors.New("client has no authorization credentials")
-	}
-
 	resp, err := c.Client.SendRequest(ctx, options)
 	if err != nil {
 		return resp, err
@@ -248,7 +244,9 @@ func (c *APIClient) SendRequest(ctx context.Context, options c8y.RequestOptions)
 var ErrNoMQTTClient = errors.New("no mqtt client")
 
 func NewService(broker string, clientID string, cleanSession bool, httpEndpoint string, dryRun bool) (*Service, error) {
-	healthTopic := fmt.Sprintf("te/device/main/service/%s/status/health", clientID)
+	parentTopic := "device/main//"
+	tedgeTarget := fmt.Sprintf("te/device/main/service/%s", clientID)
+	healthTopic := fmt.Sprintf("%s/status/health", tedgeTarget)
 	opts := mqtt.NewClientOptions().SetClientID(clientID).AddBroker(broker).SetCleanSession(cleanSession).SetWill(healthTopic, `{"status":"down"}`, 1, true)
 	client := mqtt.NewClient(opts)
 
@@ -265,7 +263,15 @@ func NewService(broker string, clientID string, cleanSession bool, httpEndpoint 
 		EntityStore:   NewEntityStore(),
 	}
 	service.APIClient = NewCumulocityClient(httpEndpoint)
-	client.Publish(fmt.Sprintf("te/device/main/service/%s", clientID), 1, true, `{"@type":"service"}`).Wait()
+	serviceRegistrationMessage := map[string]any{
+		"@type":   "service",
+		"@parent": parentTopic,
+	}
+	msg, err := json.Marshal(serviceRegistrationMessage)
+	if err != nil {
+		return nil, err
+	}
+	client.Publish(tedgeTarget, 1, true, msg).Wait()
 	client.Publish(healthTopic, 1, true, `{"status":"up"}`).Wait()
 	return service, nil
 }
@@ -315,7 +321,13 @@ func (s *Service) ScanMappingFiles(dirs []string) []routes.Route {
 					return err
 				}
 				if !spec.Disable {
-					s.Routes = append(s.Routes, spec.Routes...)
+					for _, r := range spec.Routes {
+						if !r.Disable {
+							s.Routes = append(s.Routes, r)
+						} else {
+							slog.Info("Ignoring disabled route", "file", path, "route", r.Name)
+						}
+					}
 				} else {
 					slog.Info("Skipping routes as file is marked as disabled.", "file", path)
 				}

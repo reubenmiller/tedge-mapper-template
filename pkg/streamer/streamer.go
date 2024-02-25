@@ -49,6 +49,7 @@ type RestRequest struct {
 	Host   string `json:"host,omitempty"`
 	Method string `json:"method,omitempty"`
 	Path   string `json:"path,omitempty"`
+	Body   any    `json:"body,omitempty"`
 }
 
 func (r *RestRequest) Validate() error {
@@ -69,7 +70,7 @@ func (r *RestRequest) Validate() error {
 type OutputMessage struct {
 	Topic      string                `json:"topic"`
 	Message    any                   `json:"message,omitempty"`
-	RawMessage string                `json:"raw_message,omitempty"`
+	RawMessage *string               `json:"raw_message,omitempty"`
 	Delay      float32               `json:"delay"`
 	Updates    []SimpleOutputMessage `json:"updates"`
 	API        *RestRequest          `json:"api,omitempty"`
@@ -118,8 +119,8 @@ func (m *OutputMessage) DisableContext() bool {
 }
 
 func (m *OutputMessage) MessageString() string {
-	if m.RawMessage != "" {
-		return m.RawMessage
+	if m.RawMessage != nil {
+		return *m.RawMessage
 	}
 
 	switch v := m.Message.(type) {
