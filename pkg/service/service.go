@@ -345,7 +345,13 @@ type MessageHandler func(topic string, message_in string) (message_out *streamer
 
 func (s *Service) Register(topics []string, qos byte, handler MessageHandler) error {
 	handlerWrapper := func(c mqtt.Client, m mqtt.Message) {
-		slog.Info("Received message.", "topic", m.Topic(), "payload_len", len(m.Payload()))
+		payloadLen := len(m.Payload())
+		slog.Info("Received message.", "topic", m.Topic(), "payload_len", payloadLen)
+
+		if payloadLen == 0 {
+			slog.Info("Ignoring empty message", "topic", m.Topic())
+			return
+		}
 		handler(m.Topic(), string(m.Payload()))
 	}
 

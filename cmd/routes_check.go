@@ -147,6 +147,11 @@ Examples:
 						jsonnet.WithColorStackTrace(useColor),
 					)
 
+					if msg.MessageString() == "" {
+						slog.Info("Ignoring empty message", "topic", msg.Topic)
+						continue
+					}
+
 					output, err := handler(msg.Topic, msg.MessageString())
 					if err != nil {
 						slog.Error("handler returned an error.", "err", err)
