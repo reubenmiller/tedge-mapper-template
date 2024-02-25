@@ -52,7 +52,7 @@ routes:
           topic: topic,
           raw_message: '',
           retain: true,
-          skip: skip,
+          skip: skip || c8yStatus == 'EXECUTING',
           api: {
             skip: skip,
             method: 'PUT',

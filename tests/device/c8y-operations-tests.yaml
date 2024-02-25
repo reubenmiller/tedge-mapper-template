@@ -43,3 +43,70 @@ tests:
 
         Input Message
           topic:    te/device/main///cmd/report/c8y-12345
+
+  Update c8y operation to executing:
+    command: |
+      go run main.go routes check --dir ./routes -t 'te/device/main///cmd/report/c8y-1234' -m '{
+        "te_Report": {
+          "name":"hello"
+        },
+        "id": "12345",
+        "status": "executing",
+        "_withTransitions": true
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: operation-cleanup (te/+/+/+/+/cmd/+/+)
+
+        Input Message
+          topic:    te/device/main///cmd/report/c8y-1234
+
+        Output Message (api)
+          request:  PUT devicecontrol/operations/12345 {"status":"EXECUTING"}
+  
+  Update c8y operation to successful:
+    command: |
+      go run main.go routes check --dir ./routes -t 'te/device/main///cmd/report/c8y-1234' -m '{
+        "te_Report": {
+          "name":"hello"
+        },
+        "id": "12345",
+        "status": "successful",
+        "_withTransitions": true
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: operation-cleanup (te/+/+/+/+/cmd/+/+)
+
+        Input Message
+          topic:    te/device/main///cmd/report/c8y-1234
+
+        Output Message (mqtt)
+          topic:    te/device/main///cmd/report/c8y-1234
+
+        Output Message (api)
+          request:  PUT devicecontrol/operations/12345 {"status":"SUCCESSFUL"}
+
+  Update c8y operation to failed:
+    command: |
+      go run main.go routes check --dir ./routes -t 'te/device/main///cmd/report/c8y-1234' -m '{
+        "te_Report": {
+          "name":"hello"
+        },
+        "id": "12345",
+        "status": "failed",
+        "reason": "some error",
+        "_withTransitions": true
+      }' -s --device-id sim_tedge01
+    stdout:
+      exactly: |
+        Route: operation-cleanup (te/+/+/+/+/cmd/+/+)
+
+        Input Message
+          topic:    te/device/main///cmd/report/c8y-1234
+
+        Output Message (mqtt)
+          topic:    te/device/main///cmd/report/c8y-1234
+
+        Output Message (api)
+          request:  PUT devicecontrol/operations/12345 {"failureReason":"some error","status":"FAILED"}

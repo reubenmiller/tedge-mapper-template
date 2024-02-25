@@ -50,6 +50,7 @@ type RestRequest struct {
 	Method string `json:"method,omitempty"`
 	Path   string `json:"path,omitempty"`
 	Body   any    `json:"body,omitempty"`
+	Skip   bool   `json:"skip,omitempty"`
 }
 
 func (r *RestRequest) Validate() error {

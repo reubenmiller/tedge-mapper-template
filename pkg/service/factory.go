@@ -160,11 +160,13 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 			}
 		}
 
-		if sm.Skip {
-			slog.Info("skip.", "topic", sm.Topic, "message", string(output))
-		} else {
-			// TODO: Switch to using the .MessageString() method
-			if sm.IsMQTTMessage() {
+		// TODO: Switch to using the .MessageString() method
+		useDelay := false
+		if sm.IsMQTTMessage() {
+			if sm.Skip {
+				slog.Info("skip.", "topic", sm.Topic, "message", string(output))
+			} else {
+				useDelay = true
 				if sm.RawMessage != nil {
 					slog.Info("Publishing new raw message.", "topic", sm.Topic, "message", *sm.RawMessage, "retain", sm.Retain, "delay", sm.Delay)
 					if client != nil && !engine.DryRun() {
@@ -177,8 +179,13 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 					}
 				}
 			}
+		}
 
-			if sm.IsAPIRequest() {
+		if sm.IsAPIRequest() {
+			if sm.API.Skip {
+				slog.Info("skip api.", "topic", sm.Topic, "message", string(output))
+			} else {
+				useDelay = true
 				if err := sm.API.Validate(); err != nil {
 					slog.Error("Invalid api request.", "error", err)
 					return nil, err
@@ -187,8 +194,10 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 					optionalDelay(sm.Delay, WithRESTRequest(apiClient, sm.API.Host, sm.API.Method, sm.API.Path, sm.API.Body))
 				}
 			}
+		}
 
-			// Prevent posting to quickly
+		// Prevent posting to quickly
+		if useDelay {
 			time.Sleep(postDelay)
 		}
 
@@ -451,7 +460,7 @@ func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, c
 	}
 
 	if !out.Skip {
-		fmt.Fprintf(w, "\nOutput Message (%s)\n", out.GetType())
+		fmt.Fprintf(w, "\nOutput Message (%s)\n", "mqtt")
 	}
 	if out.IsMQTTMessage() && !out.Skip {
 		fmt.Fprintf(w, "  %-10s%v\n", "topic:", out.Topic)
@@ -460,8 +469,9 @@ func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, c
 		}
 	}
 
-	if out.IsAPIRequest() && !out.Skip {
+	if out.IsAPIRequest() && !out.API.Skip {
 		// API message don't chain, so no point printing the 'end' meta info
+		fmt.Fprintf(w, "\nOutput Message (%s)\n", out.GetType())
 		if body, err := json.Marshal(out.API.Body); err == nil {
 			fmt.Fprintf(w, "  %-10s%v %v %s\n", "request:", out.API.Method, out.API.Path, body)
 		} else {
