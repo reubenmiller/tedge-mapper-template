@@ -462,7 +462,11 @@ func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, c
 
 	if out.IsAPIRequest() && !out.Skip {
 		// API message don't chain, so no point printing the 'end' meta info
-		fmt.Fprintf(w, "  %-10s%v %v\n", "request:", out.API.Method, out.API.Path)
+		if body, err := json.Marshal(out.API.Body); err == nil {
+			fmt.Fprintf(w, "  %-10s%v %v %s\n", "request:", out.API.Method, out.API.Path, body)
+		} else {
+			fmt.Fprintf(w, "  %-10s%v %v\n", "request:", out.API.Method, out.API.Path)
+		}
 	}
 
 	if !out.Skip {
