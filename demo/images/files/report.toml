@@ -1,0 +1,18 @@
+operation = "report"
+
+on_error = "set-fail"
+
+[init]
+  script = "/usr/bin/report.sh init ${.payload.id}"
+  on_success = "executing"
+  on_error = { status = "failed", reason = "not timely" }
+
+[executing]
+  script = "/usr/bin/report.sh executing ${.payload.id}"
+  on_success = "successful"
+
+[successful]
+  action = "cleanup"
+
+[failed]
+  action = "cleanup"

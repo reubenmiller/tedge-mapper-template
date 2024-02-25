@@ -1,66 +1,65 @@
 # yaml-language-server: $schema=../spec/schema.json
 ---
 routes:
-- name: c8y-devicecontrol-notifications
+- name: c8y-operation-mapper
   topics:
     - c8y/devicecontrol/notifications
   template:
     type: jsonnet
     value: |
-      local utils = import 'utils.libsonnet';
       local c8y = import 'c8y.libsonnet';
-
-      {
-          message: {
-            # Replace any internal urls with external ones
-            payload: utils.recurseReplace(
-              message,
-              'https?://\\bt\\d+\\.(cumulocity.com|latest.stage.c8y.io)',
-              'https://' + std.get(meta, 'c8y_http', std.get(meta.env, 'TEDGE_ROUTE_C8Y_BASEURL', ''))
-            ),
-            _ctx: {
-              local _ctx = self,
-              local device_id = std.get(meta, 'device_id', ''),
-
-              serial: utils.get(message, 'externalSource.externalId', ''),
-              localSerial: utils.trimPrefix(_ctx.serial, device_id + '_'),
-              parent: if _ctx.serial == device_id then "" else device_id,
-
-              deviceID: std.get(message, 'deviceId', ''),
-              agentID: std.get(message, 'agentId', ''),
-              operationID: std.get(message, 'id', ''),
-              opType: c8y.operation.type(message, 'c8y_', 'unknown'),
-              id: if _ctx.operationID != "" then _ctx.operationID else _.ID(),
-            },
-          },
-          topic: 'c8y/devicecontrol/notifications/' + $.message._ctx.serial + '/' + $.message._ctx.opType,
-          skip: $.message._ctx.serial == '',
-          end: false,
-      }
-
-#
-# Shell/Command operation
-#
-- name: shell-operation
-  topics:
-    - c8y/devicecontrol/notifications/+/c8y_Command
-  template:
-    type: jsonnet
-    value: |
       local tedge = import 'tedge.libsonnet';
-      local target = tedge.v1.convertToTopic(ctx.serial, meta=meta);
+
+      local cloud = std.split(topic, "/")[0];
+      local target = tedge.v1.convertToTopic(message.externalSource.externalId, meta=meta);
+      local fragmentPrefix = "te_";
+      local cloudOpType = c8y.operation.type(message, fragmentPrefix, '');
+      local tedgeOpType = if std.startsWith(cloudOpType, fragmentPrefix) then std.asciiLower(cloudOpType[std.length(fragmentPrefix):]) else cloudOpType;
+
       {
           topic: std.join(
             "/",
             [
               target,
-              'cmd/execute_shell',
-              'c8y-' + ctx.id,
+              'cmd',
+              tedgeOpType,
+              cloud + '-' + message.id,
             ]
           ),
-          message: {
-            command: message.payload.c8y_Command.text,
-          },
+          message: message + {"status":"init","_withTransitions":true},
           retain: true,
+          skip: std.isEmpty(tedgeOpType),
+          context: false,
+      }
+
+- name: operation-cleanup
+  topics:
+    - te/+/+/+/+/cmd/+/+
+  template:
+    type: jsonnet
+    value: |
+      local c8y = import 'c8y.libsonnet';
+      local tedge = import 'tedge.libsonnet';
+
+      local c8yStatus = c8y.operation.status(message.status, '');
+      local activeStatus = c8yStatus == 'EXECUTING' || c8yStatus == 'SUCCESSFUL' || c8yStatus == 'FAILED';
+      local operationDetails = if c8yStatus == "FAILED" then {
+        failureReason: std.get(message, 'reason', ''),
+      } else {};
+      local skip = !activeStatus || !std.get(message, '_withTransitions', false);
+      
+      {
+          topic: topic,
+          raw_message: '',
+          retain: true,
+          skip: skip,
+          api: {
+            skip: skip,
+            method: 'PUT',
+            path: 'devicecontrol/operations/%s' % message.id,
+            body: {
+              status: c8yStatus,
+            } + operationDetails,
+          },
           context: false,
       }
