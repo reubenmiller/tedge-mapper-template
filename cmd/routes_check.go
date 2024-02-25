@@ -7,6 +7,7 @@ import (
 	"container/list"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
 	"github.com/mattn/go-isatty"
@@ -14,7 +15,6 @@ import (
 	"github.com/reubenmiller/tedge-mapper-template/pkg/service"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/streamer"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slog"
 )
 
 // executeCmd represents the execute command
@@ -58,7 +58,7 @@ Examples:
 
 		if _, err := os.Stat(message); err == nil {
 			messageFile := message
-			slog.Info("Reading input message from file. path=%", messageFile)
+			slog.Info("Reading input message from file.", "path", messageFile)
 			file, err := os.Open(messageFile)
 			if err != nil {
 				return err
@@ -146,6 +146,11 @@ Examples:
 						jsonnet.WithLibraryPaths(libPaths...),
 						jsonnet.WithColorStackTrace(useColor),
 					)
+
+					if msg.MessageString() == "" {
+						slog.Info("Ignoring empty message", "topic", msg.Topic)
+						continue
+					}
 
 					output, err := handler(msg.Topic, msg.MessageString())
 					if err != nil {

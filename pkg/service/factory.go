@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -22,7 +23,6 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/pretty"
 	"github.com/tidwall/sjson"
-	"golang.org/x/exp/slog"
 )
 
 var TedgeBinary = "tedge"
@@ -160,15 +160,17 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 			}
 		}
 
-		if sm.Skip {
-			slog.Info("skip.", "topic", sm.Topic, "message", string(output))
-		} else {
-			// TODO: Switch to using the .MessageString() method
-			if sm.IsMQTTMessage() {
-				if sm.RawMessage != "" {
-					slog.Info("Publishing new raw message.", "topic", sm.Topic, "message", sm.RawMessage, "delay", sm.Delay)
+		// TODO: Switch to using the .MessageString() method
+		useDelay := false
+		if sm.IsMQTTMessage() {
+			if sm.Skip {
+				slog.Info("skip.", "topic", sm.Topic, "message", string(output))
+			} else {
+				useDelay = true
+				if sm.RawMessage != nil {
+					slog.Info("Publishing new raw message.", "topic", sm.Topic, "message", *sm.RawMessage, "retain", sm.Retain, "delay", sm.Delay)
 					if client != nil && !engine.DryRun() {
-						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, sm.GetQoS(), sm.Retain, sm.RawMessage))
+						optionalDelay(sm.Delay, WithMQTTPublisher(client, sm.Topic, sm.GetQoS(), sm.Retain, *sm.RawMessage))
 					}
 				} else {
 					slog.Info("Publishing new message.", "topic", sm.Topic, "message", string(output), "delay", sm.Delay)
@@ -177,18 +179,25 @@ func NewStreamFactory(client mqtt.Client, apiClient *APIClient, route routes.Rou
 					}
 				}
 			}
+		}
 
-			if sm.IsAPIRequest() {
+		if sm.IsAPIRequest() {
+			if sm.API.Skip {
+				slog.Info("skip api.", "topic", sm.Topic, "message", string(output))
+			} else {
+				useDelay = true
 				if err := sm.API.Validate(); err != nil {
 					slog.Error("Invalid api request.", "error", err)
 					return nil, err
 				}
 				if !engine.DryRun() {
-					optionalDelay(sm.Delay, WithRESTRequest(apiClient, sm.API.Host, sm.API.Method, sm.API.Path, sm.Message))
+					optionalDelay(sm.Delay, WithRESTRequest(apiClient, sm.API.Host, sm.API.Method, sm.API.Path, sm.API.Body))
 				}
 			}
+		}
 
-			// Prevent posting to quickly
+		// Prevent posting to quickly
+		if useDelay {
 			time.Sleep(postDelay)
 		}
 
@@ -221,15 +230,6 @@ func SendAPIRequest(client *APIClient, host, method, path string, body any) (err
 	}
 	slog.Info("Sent request.", "response", resp.JSON().Raw)
 	return nil
-}
-
-func GetCumulocityURL() (string, error) {
-	_, err := exec.LookPath(TedgeBinary)
-	if err != nil {
-		return "", err
-	}
-	cmd, err := exec.Command("tedge", "config", "get", "c8y.http").Output()
-	return string(cmd), err
 }
 
 type MetaOption func(m map[string]any)
@@ -369,7 +369,7 @@ func NewDefaultService(opts *DefaultServiceOptions) (*Service, error) {
 
 	if opts.EnableRegistrationListener {
 		registerCallback := func(c mqtt.Client, m mqtt.Message) {
-			slog.Info("Received registration message.", "topic", m.Topic(), "message", m.Payload())
+			slog.Info("Received registration message.", "topic", m.Topic(), "message", string(m.Payload()))
 			nonEmptyParts := make([]string, 0)
 			for _, part := range strings.Split(m.Topic(), "/") {
 				if part != "" {
@@ -395,9 +395,6 @@ func NewDefaultService(opts *DefaultServiceOptions) (*Service, error) {
 		}
 
 		regTopics := map[string]byte{
-			"te/+":       1,
-			"te/+/+":     1,
-			"te/+/+/+":   1,
 			"te/+/+/+/+": 1,
 		}
 		if token := registrationClient.SubscribeMultiple(regTopics, registerCallback); token.Wait() && token.Error() != nil {
@@ -462,22 +459,29 @@ func DisplayMessage(name string, in, out *streamer.OutputMessage, w io.Writer, c
 		}
 	}
 
-	fmt.Fprintf(w, "\nOutput Message (%s)\n", out.GetType())
-	if out.IsMQTTMessage() {
+	if !out.Skip {
+		fmt.Fprintf(w, "\nOutput Message (%s)\n", "mqtt")
+	}
+	if out.IsMQTTMessage() && !out.Skip {
 		fmt.Fprintf(w, "  %-10s%v\n", "topic:", out.Topic)
 		if out.End {
 			fmt.Fprintf(w, "  %-10s%v\n", "end:", out.End)
 		}
 	}
 
-	if out.IsAPIRequest() {
+	if out.IsAPIRequest() && !out.API.Skip {
 		// API message don't chain, so no point printing the 'end' meta info
-		fmt.Fprintf(w, "  %-10s%v %v\n", "request:", out.API.Method, out.API.Path)
+		fmt.Fprintf(w, "\nOutput Message (%s)\n", out.GetType())
+		if body, err := json.Marshal(out.API.Body); err == nil {
+			fmt.Fprintf(w, "  %-10s%v %v %s\n", "request:", out.API.Method, out.API.Path, body)
+		} else {
+			fmt.Fprintf(w, "  %-10s%v %v\n", "request:", out.API.Method, out.API.Path)
+		}
 	}
 
 	if !out.Skip {
-		if out.RawMessage != "" {
-			fmt.Fprintf(w, "%s\n", out.RawMessage)
+		if out.RawMessage != nil {
+			fmt.Fprintf(w, "%s\n", *out.RawMessage)
 		} else {
 			displayJsonMessage(w, out.Message, compact, useColor)
 		}

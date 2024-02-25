@@ -10,6 +10,9 @@
                 "description": {
                     "type": "string"
                 },
+                "disable": {
+                    "type": "boolean"
+                },
                 "skip": {
                     "type": "boolean"
                 },
@@ -21,12 +24,12 @@
                             {
                                 "type": "string",
                                 "enum": [
-                                    "tedge/measurements",
-                                    "tedge/measurements/+",
-                                    "tedge/events/+",
-                                    "tedge/events/+/+",
-                                    "tedge/alarms/+",
-                                    "tedge/alarms/+/+"
+                                    "te/+/+/+/+/m/+",
+                                    "te/+/+/+/+/e/+",
+                                    "te/+/+/+/+/a/+",
+                                    "te/+/+/+/+/twin/+",
+                                    "te/+/+/+/+/status/health",
+                                    "te/+/+/+/+/cmd/+"
                                 ]
                             }
                         ]

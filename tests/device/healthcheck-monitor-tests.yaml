@@ -7,13 +7,13 @@ config:
 tests:
   bridge health up:
     command: |
-      go run main.go routes check --dir ./cmd --dir ./routes -t tedge/health/custom-bridge -m '1' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./cmd --dir ./routes -t te/device/main/service/custom-bridge/status/health -m '1' -s --device-id sim_tedge01
     stdout:
       file: tests/messages/main/healthcheck-bridge-up.golden
 
   bridge health down:
     command: |
-      go run main.go routes check --dir ./cmd --dir ./routes -t tedge/health/custom-bridge -m '0' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./cmd --dir ./routes -t te/device/main/service/custom-bridge/status/health -m '0' -s --device-id sim_tedge01
     stdout:
       contains:
         - 'topic:    c8y/alarm/alarms/create'
@@ -23,13 +23,13 @@ tests:
 
   service health up:
     command: |
-      go run main.go routes check --dir ./cmd --dir ./routes -t tedge/health/tedge-agent -m '{"status":"up"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./cmd --dir ./routes -t te/device/main/service/tedge-agent/status/health -m '{"status":"up"}' -s --device-id sim_tedge01
     stdout:
       file: tests/messages/main/healthcheck-service-up.golden
 
   service health down:
     command: |
-      go run main.go routes check --dir ./cmd --dir ./routes -t tedge/health/tedge-agent -m '{"status":"down"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./cmd --dir ./routes -t te/device/main/service/tedge-agent/status/health -m '{"status":"down"}' -s --device-id sim_tedge01
     stdout:
       contains:
         - 'topic:    c8y/alarm/alarms/create'
@@ -39,7 +39,7 @@ tests:
 
   mapper health down:
     command: |
-      go run main.go routes check --dir ./cmd --dir ./routes -t tedge/health/tedge-mapper-c8y -m '{"status":"down"}' -s --device-id sim_tedge01
+      go run main.go routes check --dir ./cmd --dir ./routes -t te/device/main/service/tedge-mapper-c8y/status/health -m '{"status":"down"}' -s --device-id sim_tedge01
     stdout:
       contains:
         - 'topic:    c8y/alarm/alarms/create'

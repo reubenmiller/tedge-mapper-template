@@ -11,23 +11,24 @@
     },
     
     operation:: {    
-        status(value)::
+        status(value, defaultValue='FAILED')::
             std.get(
-            {
-                successful: "SUCCESSFUL",
-                failed: "FAILED",
-                executing: "EXECUTING",
-                pending: "PENDING",
-            },
-            std.asciiLower(value),
-            'FAILED'
+                {
+                    pending: "PENDING",
+                    executing: "EXECUTING",
+                    successful: "SUCCESSFUL",
+                    failed: "FAILED",
+                },
+                std.asciiLower(std.toString(value)),
+                defaultValue,
             ),
         
         type(m, prefix='', defaultType='unknown')::
+            local ignoreKeys = ["delivery", "externalSource"];
             local _matches = [
                 item.key
                 for item in std.objectKeysValues(m)
-                if (std.isObject(item.value) || std.isArray(item.value)) && std.startsWith(item.key, prefix)
+                if (std.isObject(item.value) || std.isArray(item.value)) && std.startsWith(item.key, prefix) && std.count(ignoreKeys, item.key) == 0
             ];
             if std.length(_matches) > 0 then _matches[0] else defaultType
         ,

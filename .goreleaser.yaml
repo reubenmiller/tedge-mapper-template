@@ -39,7 +39,6 @@ archives:
     builds: [linux]
     <<: &archive_defaults
       name_template: '{{ .ProjectName }}_{{ .Version }}_{{- if eq .Os "darwin" }}macOS{{- else }}{{ .Os }}{{ end }}_{{ .Arch }}{{- if ne .Arm "" }}_v{{ .Arm }}{{ end }}'
-      rlcp: true
     wrap_in_directory: "true"
     format: tar.gz
     files:
@@ -127,12 +126,8 @@ nfpms:
         dst: /etc/tedge-mapper-template/routes/
         type: config|noreplace
 
-      - src: routes-te/*.yaml
-        dst: /etc/tedge-mapper-template/routes-te/
-        type: config|noreplace
-
-      - src: routes-simulation/child/*.yaml
-        dst: /etc/tedge-mapper-template/routes-simulation/child/
+      - src: routes-simulation/*.yaml
+        dst: /etc/tedge-mapper-template/routes-simulation/
         type: config|noreplace
 
       - src: lib/*.libsonnet

@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=../spec/schema.json
+---
+routes:
+
+#---------------------------------#
+# firmware simulator
+#---------------------------------#
+- name: simulation - firmware
+  description: Move firmware operation through the operation states
+  topics:
+    - te/+/+/+/+/cmd/firmware_update/+
+  template:
+    type: jsonnet
+    value: |
+      local status = std.get(message, 'status', '');
+      local nextStatus = {
+        'init': 'scheduled',
+        'scheduled': 'executing',
+        'executing': 'successful',
+      };
+
+      {
+        topic: topic,
+        message: message + {
+          status: std.get(nextStatus, status, 'failed'),
+        },
+        skip: status == "successful" || status == "failed" || status == "",
+      }
+
+#---------------------------------#
+# software simulator
+#---------------------------------#
+- name: simulation - software - set to executing
+  topics:
+    - te/+/+/+/+/cmd/software_update/+
+  template:
+    type: jsonnet
+    value: |
+      local status = std.get(message, 'status', '');
+      local nextStatus = {
+        'init': 'scheduled',
+        'scheduled': 'executing',
+        'executing': 'successful',
+      };
+
+      {
+        topic: topic,
+        message: {
+          id: message.id,
+          status: std.get(nextStatus, status, 'failed'),
+          currentSoftwareList: [
+            {
+              type: "apt",
+              modules: [
+                {
+                  name: "curl",
+                  version: "7.74.0-1.3+deb11u7"
+                },
+                {
+                  name: "package2",
+                  version: "2.0.0"
+                }
+              ]
+            },
+            {
+              type: "dummy",
+              modules: []
+            }
+          ]
+        },
+        context: false,
+      }

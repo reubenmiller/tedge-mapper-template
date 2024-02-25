@@ -1,15 +1,12 @@
-FROM ghcr.io/thin-edge/tedge-demo-main-systemd:20230526.1
+FROM ghcr.io/thin-edge/tedge-demo-main-systemd:20240223.1219
 
 # custom configuration
-COPY images/files/tedge-registration-server.env /etc/device-registration-server/env
 COPY images/files/tedge-mapper-template.env /etc/tedge-mapper-template/env
 
 # Install
-COPY dist/tedge*.deb /setup/build/
-COPY dist/c8y*.deb /setup/build/
+COPY dist/tedge-mapper-template*.deb /setup/build/
 COPY dist/tedge-mapper-template*.deb /tmp/
-RUN dpkg -i /tmp/*.deb \
-    && systemctl enable tedge-mapper-template.service
+RUN dpkg -i /tmp/*.deb
 
-# custom scripts
-COPY images/files/50-main-setup.sh /etc/boostrap/post.d/
+COPY images/files/report.sh /usr/bin/
+COPY images/files/report.toml /etc/tedge/operations/

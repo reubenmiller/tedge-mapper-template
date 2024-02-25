@@ -4,6 +4,7 @@ Copyright © 2023 thin-edge thinedge@thin-edge.io
 package cmd
 
 import (
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,10 +12,10 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/reubenmiller/tedge-mapper-template/pkg/service"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slog"
 )
 
 var ArgBroker string
+var ArgHTTPEndpoint string
 var ArgClientID string
 var ArgCleanSession bool
 
@@ -57,6 +58,7 @@ Examples:
 				Broker:                     ArgBroker,
 				ClientID:                   ArgClientID,
 				CleanSession:               ArgCleanSession,
+				HTTPEndpoint:               ArgHTTPEndpoint,
 				RouteDirs:                  routeDirs,
 				MaxRouteDepth:              maxDepth,
 				PostMessageDelay:           delay,
@@ -94,5 +96,6 @@ func init() {
 	serveCmd.Flags().StringVar(&ArgBroker, "host", "localhost:1883", "Broker endpoint (can included port number)")
 	serveCmd.Flags().BoolVar(&ArgCleanSession, "clean", true, "Clean session")
 	serveCmd.Flags().StringVarP(&ArgClientID, "clientid", "i", "tedge-mapper-template", "MQTT client id")
+	serveCmd.Flags().StringVar(&ArgHTTPEndpoint, "api-host", "http://127.0.0.1:8001/c8y", "HTTP endpoint that api requests should be sent to")
 	serveCmd.Flags().String("entityfile", "", "Load initial entity definitions from a json file")
 }

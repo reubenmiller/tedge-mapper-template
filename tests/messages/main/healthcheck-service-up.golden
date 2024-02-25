@@ -1,7 +1,7 @@
-Route: monitor (tedge/health/+)
+Route: monitor (te/+/+/+/+/status/health)
 
 Input Message
-  topic:    tedge/health/tedge-agent
+  topic:    te/device/main/service/tedge-agent/status/health
 
 Output Message (mqtt)
   topic:    c8y/s/us

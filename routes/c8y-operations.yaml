@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=../spec/schema.json
+---
+routes:
+- name: c8y-operation-mapper
+  topics:
+    - c8y/devicecontrol/notifications
+  template:
+    type: jsonnet
+    value: |
+      local c8y = import 'c8y.libsonnet';
+      local tedge = import 'tedge.libsonnet';
+
+      local cloud = std.split(topic, "/")[0];
+      local target = tedge.v1.convertToTopic(message.externalSource.externalId, meta=meta);
+      local fragmentPrefix = "te_";
+      local cloudOpType = c8y.operation.type(message, fragmentPrefix, '');
+      local tedgeOpType = if std.startsWith(cloudOpType, fragmentPrefix) then std.asciiLower(cloudOpType[std.length(fragmentPrefix):]) else cloudOpType;
+
+      {
+          topic: std.join(
+            "/",
+            [
+              target,
+              'cmd',
+              tedgeOpType,
+              cloud + '-' + message.id,
+            ]
+          ),
+          message: message + {"status":"init","_withTransitions":true},
+          retain: true,
+          skip: std.isEmpty(tedgeOpType),
+          context: false,
+      }
+
+- name: operation-cleanup
+  topics:
+    - te/+/+/+/+/cmd/+/+
+  template:
+    type: jsonnet
+    value: |
+      local c8y = import 'c8y.libsonnet';
+      local tedge = import 'tedge.libsonnet';
+
+      local c8yStatus = c8y.operation.status(message.status, '');
+      local activeStatus = c8yStatus == 'EXECUTING' || c8yStatus == 'SUCCESSFUL' || c8yStatus == 'FAILED';
+      local operationDetails = if c8yStatus == "FAILED" then {
+        failureReason: std.get(message, 'reason', ''),
+      } else {};
+      local skip = !activeStatus || std.get(message, '_withTransitions', false) == false;
+      
+      {
+          topic: topic,
+          raw_message: '',
+          retain: true,
+          skip: skip || c8yStatus == 'EXECUTING',
+          api: {
+            skip: skip,
+            method: 'PUT',
+            path: 'devicecontrol/operations/%s' % message.id,
+            body: {
+              status: c8yStatus,
+            } + operationDetails,
+          },
+          context: false,
+      }

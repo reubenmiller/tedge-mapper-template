@@ -7,25 +7,5 @@ services:
     networks:
     - tedge
 
-  # child01:
-  #   build:
-  #     dockerfile: ./images/child.dockerfile
-  #   privileged: true
-  #   networks:
-  #   - tedge
-  #   entrypoint: /bin/sleep
-  #   command:
-  #   - infinity
-
-  # # To demo child device handling for firmware
-  # child02:
-  #   image: ghcr.io/thin-edge/tedge-demo-child:${VERSION:-latest}
-  #   pull_policy: always
-  #   restart: always
-  #   networks:
-  #     - tedge
-  #   environment:
-  #     - CONNECTOR_DEVICE_ID=child02
-
 networks:
   tedge:
