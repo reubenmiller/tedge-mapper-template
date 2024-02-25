@@ -13,14 +13,14 @@
     operation:: {    
         status(value, defaultValue='FAILED')::
             std.get(
-            {
-                successful: "SUCCESSFUL",
-                failed: "FAILED",
-                executing: "EXECUTING",
-                pending: "PENDING",
-            },
-            std.asciiLower(value),
-            defaultValue
+                {
+                    pending: "PENDING",
+                    executing: "EXECUTING",
+                    successful: "SUCCESSFUL",
+                    failed: "FAILED",
+                },
+                std.asciiLower(std.toString(value)),
+                defaultValue,
             ),
         
         type(m, prefix='', defaultType='unknown')::

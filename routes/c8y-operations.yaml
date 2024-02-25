@@ -46,7 +46,7 @@ routes:
       local operationDetails = if c8yStatus == "FAILED" then {
         failureReason: std.get(message, 'reason', ''),
       } else {};
-      local skip = !activeStatus || !std.get(message, '_withTransitions', false);
+      local skip = !activeStatus || std.get(message, '_withTransitions', false) == false;
       
       {
           topic: topic,
