@@ -10,6 +10,9 @@
                 "description": {
                     "type": "string"
                 },
+                "disable": {
+                    "type": "boolean"
+                },
                 "skip": {
                     "type": "boolean"
                 },
